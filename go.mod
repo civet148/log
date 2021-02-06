@@ -1,4 +1,4 @@
-module log
+module github.com/civet148/log
 
 go 1.13
 
