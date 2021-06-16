@@ -350,15 +350,17 @@ func getCaller(skip int) (strFile, strFunc string, nLineNo int) {
 
 func getStack(skip, n int) string {
 	var strStack string
+	strStack += "\t###CALLSTACK### { "
 	for i := 0; i < n; i++ {
 		pc, file, line, ok := runtime.Caller(skip + i)
 		if ok {
 			strFile := path.Base(file)
 			nLineNo := line
 			strFunc := getFuncName(pc)
-			strStack += fmt.Sprintf("|- %s:%d %s() \n", strFile, nLineNo, strFunc)
+			strStack += fmt.Sprintf("%s:%d %s(); ", strFile, nLineNo, strFunc)
 		}
 	}
+	strStack += "}"
 	return strStack
 }
 
@@ -401,14 +403,14 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	var output string
 
 	switch runtime.GOOS {
-	//case "windows": //Windows终端不再支持颜色显示
-	//output = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
+	case "windows": //Windows终端颜色显示
+		output = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
 	default: //Unix类终端支持颜色显示
 		output = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
 	}
 
 	if level >= LEVEL_ERROR {
-		output += fmt.Sprintf("\n" + "call stack \n" + getStack(3, 10))
+		output += getStack(3, 10)
 	}
 	//打印到终端屏幕
 	if !option.CloseConsole {
