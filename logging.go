@@ -461,6 +461,14 @@ func fmtString(args ...interface{}) (strOut string) {
 	return
 }
 
+func fmtStringW(args ...interface{}) (strOut string) {
+	var strArgs []string
+	for _, v := range args {
+		strArgs = append(strArgs, fmt.Sprintf("%v", v))
+	}
+	return strings.Join(strArgs, " ")
+}
+
 //输出调试级别信息
 func Debug(args ...interface{}) {
 	output(LEVEL_DEBUG, fmtString(args...))
@@ -524,6 +532,41 @@ func Errorf(fmtstr string, args ...interface{}) {
 //输出危险级别信息
 func Fatalf(fmtstr string, args ...interface{}) {
 	stic.error(output(LEVEL_FATAL, fmtstr, args...))
+}
+
+//输出调试级别信息
+func Debugw(args ...interface{}) {
+	output(LEVEL_DEBUG, fmtStringW(args...))
+}
+
+//输出运行级别信息
+func Infow(args ...interface{}) {
+	output(LEVEL_INFO, fmtStringW(args...))
+}
+
+//输出警告级别信息
+func Warnw(args ...interface{}) {
+	output(LEVEL_WARN, fmtStringW(args...))
+}
+
+//输出警告级别信息
+func Warningw(args ...interface{}) {
+	output(LEVEL_WARN, fmtStringW(args...))
+}
+
+//输出错误级别信息
+func Errorw(args ...interface{}) {
+	stic.error(output(LEVEL_ERROR, fmtStringW(args...)))
+}
+
+//输出危险级别信息
+func Fatalw(args ...interface{}) {
+	stic.error(output(LEVEL_FATAL, fmtStringW(args...)))
+}
+
+//panic
+func Panicw(args ...interface{}) {
+	panic(fmt.Sprintf(fmtStringW(args...)))
 }
 
 //输出到空设备

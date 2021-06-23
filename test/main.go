@@ -120,6 +120,12 @@ func main() {
 	log.Warn("This is warn message level = ", 2)
 	log.Error("This is error message level = ", 3)
 	log.Fatal("This is fatal message level = ", 4)
+
+	log.Debugw("This is debug message level = %w", 0, "Debugw")
+	log.Infow("This is info message level = ", 1, "Infow")
+	log.Warnw("This is warn message level = ", 2, "Warnw")
+	log.Errorw("This is error message level = ", 3, "Errorw")
+	log.Fatalw("This is fatal message level = ", 4, "Fatalw")
 }
 
 func PrintFuncExecuteTime(i int, wg *sync.WaitGroup) {
