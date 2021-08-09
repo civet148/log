@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
 	"io/ioutil"
 	"log"
@@ -19,7 +20,7 @@ import (
 
 var colorStdout = colorable.NewColorableStdout()
 
-var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]"}
+var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]"}
 
 const (
 	LEVEL_DEBUG = 0
@@ -331,6 +332,8 @@ func getLevel(name string) (idx int) {
 		idx = LEVEL_ERROR
 	case LevelName[LEVEL_FATAL]:
 		idx = LEVEL_FATAL
+	case LevelName[LEVEL_PANIC]:
+		idx = LEVEL_PANIC
 	default:
 		idx = LEVEL_INFO
 	}
@@ -361,6 +364,7 @@ func getStack(skip, n int) string {
 		}
 	}
 	strStack += "}"
+	strStack = color.CyanString(strStack)
 	return strStack
 }
 
@@ -384,6 +388,8 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 		colorTimeName = fmt.Sprintf("\033[31m%v %s %s", strTimeFmt, strPID, Name)
 	case LEVEL_FATAL:
 		colorTimeName = fmt.Sprintf("\033[35m%v %s %s", strTimeFmt, strPID, Name)
+	case LEVEL_PANIC:
+		colorTimeName = fmt.Sprintf("\033[35m%v %s %s", strTimeFmt, strPID, Name)
 	default:
 		colorTimeName = fmt.Sprintf("\033[34m%v %s %s", strTimeFmt, strPID, Name)
 	}
@@ -403,8 +409,8 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	var output string
 
 	switch runtime.GOOS {
-	case "windows": //Windows终端颜色显示
-		output = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
+	//case "windows": //Windows终端（无颜色）
+	//output = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
 	default: //Unix类终端支持颜色显示
 		output = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
 	}

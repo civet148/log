@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/civet148/log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -120,6 +121,8 @@ func main() {
 	log.Warn("This is warn message level = ", 2)
 	log.Error("This is error message level = ", 3)
 	log.Fatal("This is fatal message level = ", 4)
+
+	os.Setenv("LOG_LEVEL", "info") //set log level to [info] by environment
 
 	log.Debugw("This is debug message level = %w", 0, "Debugw")
 	log.Infow("This is info message level = ", 1, "Infow")
