@@ -23,6 +23,10 @@ var colorStdout = colorable.NewColorableStdout()
 var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]"}
 
 const (
+	ENV_LOG_LEVEL = "LOG_LEVEL"
+)
+
+const (
 	LEVEL_DEBUG = 0
 	LEVEL_INFO  = 1
 	LEVEL_WARN  = 2
@@ -101,7 +105,12 @@ var (
 func init() {
 	option.FileSize = 1024 //MB
 	option.MaxBackups = 31
-	option.LogLevel = LEVEL_DEBUG
+	strEnvLevel := os.Getenv(ENV_LOG_LEVEL)
+	if strEnvLevel != "" {
+		SetLevel(strEnvLevel)
+	} else {
+		SetLevel(LEVEL_DEBUG)
+	}
 	go cleanBackupLog()
 }
 
