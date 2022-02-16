@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -20,7 +19,7 @@ import (
 
 var colorStdout = colorable.NewColorableStdout()
 
-var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]"}
+var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
 
 const (
 	ENV_LOG_LEVEL = "LOG_LEVEL"
@@ -33,6 +32,7 @@ const (
 	LEVEL_ERROR = 3
 	LEVEL_FATAL = 4
 	LEVEL_PANIC = 5
+	LEVEL_JSON  = 6
 )
 
 type LogContent struct {
@@ -128,16 +128,7 @@ func Open(strUrl string, opts ...Option) bool {
 		return false
 	}
 
-	if logUrl.Scheme == "json" { //以 'json://' 开头的URL
-
-		err = logUrl.readFromJson() //从JSON配置文件读取
-		if err != nil {
-			Error("%s", err)
-			return false
-		}
-
-	} else if logUrl.Scheme == "file" || logUrl.Scheme == "" { //以 'file://' 开头的URL或者没有协议名
-
+	if logUrl.Scheme == "file" || logUrl.Scheme == "" { //以 'file://' 开头的URL或者没有协议名
 		return logUrl.createFile() //创建文件
 	} else {
 		Error("Unknown scheme [%s]", logUrl.Scheme)
@@ -276,46 +267,6 @@ func (lu *LogUrl) createFile() bool {
 	return true
 }
 
-//从json文件加载配置
-func (lu *LogUrl) readFromJson() (err error) {
-
-	strJsonFile := option.filePath
-
-	go func() { //定时读取JSON文件更新配置信息
-
-		for {
-			var logjson LogJson //json文件序列化对象
-			//fmt.Println("JSON ", strJsonFile)
-
-			file, err := ioutil.ReadFile(strJsonFile)
-			if err != nil {
-				fmt.Println("JSON [", strJsonFile, "] read error [", err, "]")
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			err = json.Unmarshal(file, &logjson)
-			if err != nil {
-				fmt.Println("JSON [", strJsonFile, "] parse error [", err, "]")
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			option.filePath = logjson.LogCon.FilePath
-			option.LogLevel = getLevel(logjson.LogCon.LogLevel)
-			option.FileSize = logjson.LogCon.FileSize
-			option.CloseConsole = !logjson.LogCon.Console
-			if option.CloseConsole {
-				fmt.Println(logjson)
-				fmt.Println("Console output closed by ", strJsonFile)
-			}
-			time.Sleep(5 * time.Second)
-		}
-	}()
-
-	return
-}
-
 //截取函数名称
 func getFuncName(pc uintptr) (name string) {
 
@@ -415,21 +366,21 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 		return
 	}
 
-	var output string
+	var outstr string
 
 	switch runtime.GOOS {
 	//case "windows": //Windows终端（无颜色）
-	//output = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
+	//outstr = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
 	default: //Unix类终端支持颜色显示
-		output = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
+		outstr = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
 	}
 
 	if level >= LEVEL_ERROR {
-		output += getStack(3, 10)
+		outstr += getStack(3, 10)
 	}
 	//打印到终端屏幕
 	if !option.CloseConsole {
-		_, _ = fmt.Fprintln(colorStdout /*os.Stdout*/, output)
+		_, _ = fmt.Fprintln(colorStdout /*os.Stdout*/, outstr)
 	}
 
 	//输出到文件（如果Open函数传入了正确的文件路径）
@@ -616,7 +567,7 @@ func Json(args ...interface{}) {
 		strOutput += "\n...................................................\n" + string(data)
 	}
 
-	output(LEVEL_DEBUG, strOutput+"\n...................................................\n")
+	output(LEVEL_JSON, strOutput+"\n...................................................\n")
 }
 
 func JsonDebugString(v interface{}) string {

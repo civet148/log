@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/civet148/log"
 	"os"
 	"sync"
@@ -129,6 +130,9 @@ func main() {
 	log.Warnw("This is warn message level = ", 2, "Warnw")
 	log.Errorw("This is error message level = ", 3, "Errorw")
 	log.Fatalw("This is fatal message level = ", 4, "Fatalw")
+
+	err := fmt.Errorf("this is a test error")
+	log.Error(err)
 }
 
 func PrintFuncExecuteTime(i int, wg *sync.WaitGroup) {
