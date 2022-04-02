@@ -456,13 +456,17 @@ func Warning(args ...interface{}) {
 }
 
 //输出错误级别信息
-func Error(args ...interface{}) {
-	stic.error(output(LEVEL_ERROR, fmtString(args...)))
+func Error(args ...interface{}) error {
+	err := fmt.Errorf(fmtString(args...))
+	stic.error(output(LEVEL_ERROR, err.Error()))
+	return err
 }
 
 //输出危险级别信息
-func Fatal(args ...interface{}) {
-	stic.error(output(LEVEL_FATAL, fmtString(args...)))
+func Fatal(args ...interface{}) error {
+	err := fmt.Errorf(fmtString(args...))
+	stic.error(output(LEVEL_FATAL, err.Error()))
+	return err
 }
 
 //panic
@@ -491,13 +495,17 @@ func Warningf(fmtstr string, args ...interface{}) {
 }
 
 //输出错误级别信息
-func Errorf(fmtstr string, args ...interface{}) {
-	stic.error(output(LEVEL_ERROR, fmtstr, args...))
+func Errorf(fmtstr string, args ...interface{}) error {
+	err := fmt.Errorf(fmtString(args...))
+	stic.error(output(LEVEL_ERROR, err.Error()))
+	return err
 }
 
 //输出危险级别信息
-func Fatalf(fmtstr string, args ...interface{}) {
-	stic.error(output(LEVEL_FATAL, fmtstr, args...))
+func Fatalf(fmtstr string, args ...interface{}) error {
+	err := fmt.Errorf(fmtString(args...))
+	stic.error(output(LEVEL_FATAL, err.Error()))
+	return err
 }
 
 //输出调试级别信息
