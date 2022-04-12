@@ -496,14 +496,14 @@ func Warningf(fmtstr string, args ...interface{}) {
 
 //输出错误级别信息
 func Errorf(fmtstr string, args ...interface{}) error {
-	err := fmt.Errorf(fmtString(args...))
+	err := fmt.Errorf(fmtstr, args...)
 	stic.error(output(LEVEL_ERROR, err.Error()))
 	return err
 }
 
 //输出危险级别信息
 func Fatalf(fmtstr string, args ...interface{}) error {
-	err := fmt.Errorf(fmtString(args...))
+	err := fmt.Errorf(fmtstr, args...)
 	stic.error(output(LEVEL_FATAL, err.Error()))
 	return err
 }

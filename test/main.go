@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/civet148/log"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -95,40 +94,40 @@ func main() {
 	//log.SetFileSize(1) //设置最大单个文件大小(单位：MB)
 	//log.SetMaxBackup(5) //最多保留备份日志文件数量
 
-	log.Debug("This is debug message")
-	log.Info("This is info message")
-	log.Warn("This is warn message")
-	log.Error("This is error message")
-	log.Fatal("This is fatal message")
+	log.Debugf("This is debug message")
+	log.Infof("This is info message")
+	log.Warnf("This is warn message")
+	log.Errorf("This is error message")
+	log.Fatalf("This is fatal message")
 	//log.Panic("this function will call panic")
 
-	wg := &sync.WaitGroup{}
-	for i := 0; i < 1; i++ {
-
-		wg.Add(1)
-		PrintFuncExecuteTime(i, wg)
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	wg.Wait()
-	log.Leave()
-
-	//打印方法执行调用次数、总时间、平均时间和错误次数
-	log.Info("report summary: %v", log.Report())
-	log.Info("total seconds %v", totalSeconds)
-	log.Debug("This is debug message level = ", 0)
-	log.Info("This is info message level = ", 1)
-	log.Warn("This is warn message level = ", 2)
-	log.Error("This is error message level = ", 3)
-	log.Fatal("This is fatal message level = ", 4)
-
-	os.Setenv("LOG_LEVEL", "info") //set log level to [info] by environment
-
-	log.Debugw("This is debug message level = %w", 0, "Debugw")
-	log.Infow("This is info message level = ", 1, "Infow")
-	log.Warnw("This is warn message level = ", 2, "Warnw")
-	log.Errorw("This is error message level = ", 3, "Errorw")
-	log.Fatalw("This is fatal message level = ", 4, "Fatalw")
+	//wg := &sync.WaitGroup{}
+	//for i := 0; i < 1; i++ {
+	//
+	//	wg.Add(1)
+	//	PrintFuncExecuteTime(i, wg)
+	//	time.Sleep(5 * time.Millisecond)
+	//}
+	//
+	//wg.Wait()
+	//log.Leave()
+	//
+	////打印方法执行调用次数、总时间、平均时间和错误次数
+	//log.Info("report summary: %v", log.Report())
+	//log.Info("total seconds %v", totalSeconds)
+	//log.Debug("This is debug message level = ", 0)
+	//log.Info("This is info message level = ", 1)
+	//log.Warn("This is warn message level = ", 2)
+	//log.Error("This is error message level = ", 3)
+	//log.Fatal("This is fatal message level = ", 4)
+	//
+	//os.Setenv("LOG_LEVEL", "info") //set log level to [info] by environment
+	//
+	//log.Debugw("This is debug message level = %w", 0, "Debugw")
+	//log.Infow("This is info message level = ", 1, "Infow")
+	//log.Warnw("This is warn message level = ", 2, "Warnw")
+	//log.Errorw("This is error message level = ", 3, "Errorw")
+	//log.Fatalw("This is fatal message level = ", 4, "Fatalw")
 
 }
 
