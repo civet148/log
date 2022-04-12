@@ -375,7 +375,7 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 		outstr = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
 	}
 
-	if level >= LEVEL_ERROR {
+	if level >= LEVEL_ERROR && level != LEVEL_JSON {
 		outstr += getStack(3, 10)
 	}
 	//打印到终端屏幕
