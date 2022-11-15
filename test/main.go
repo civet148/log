@@ -99,6 +99,7 @@ func main() {
 	log.Warnf("This is warn message")
 	log.Errorf("This is error message")
 	log.Fatalf("This is fatal message")
+	log.Truncate(log.LEVEL_INFO, 26, "this is a truncate message log [%s]", "hello")
 	//log.Panic("this function will call panic")
 
 	//wg := &sync.WaitGroup{}

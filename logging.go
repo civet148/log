@@ -547,6 +547,14 @@ func Panicw(args ...interface{}) {
 func Null(fmtstr string, args ...interface{}) {
 }
 
+func Truncate(level, size int, fmtstr string, args ...interface{}) {
+	strOutput := fmt.Sprintf(fmtstr, args...)
+	if len(strOutput) > size {
+		strOutput = strOutput[:size] + "..."
+	}
+	output(level, strOutput)
+}
+
 //进入方法（统计）
 func Enter(args ...interface{}) {
 	output(LEVEL_INFO, "enter ", args...)
