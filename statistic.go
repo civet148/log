@@ -21,6 +21,7 @@ const (
 var (
 	FUNCNAME_ALL = "all"
 	FUNCNAME_NIL = ""
+	enableStats  bool
 )
 
 type statistic struct {
@@ -146,7 +147,9 @@ func getRoutineId() (strRoutine string) {
 
 //进入方法(enter function)
 func (s *statistic) enter(strFile, strFunc string, nLineNo int) {
-
+	if !enableStats {
+		return
+	}
 	now64 := getMicroSec()
 
 	c := caller{
@@ -184,7 +187,9 @@ func (s *statistic) enter(strFile, strFunc string, nLineNo int) {
 
 //退出方法(leave function)
 func (s *statistic) leave(strFile, strFunc string, nLineNo int) (int64, bool) {
-
+	if !enableStats {
+		return 0, true
+	}
 	now64 := getMicroSec()
 	strCallerKey := getCallerStoreKey(strFile, strFunc)
 	strResultKey := getResultStoreKey(strFile, strFunc)
@@ -231,6 +236,9 @@ func (s *statistic) leave(strFile, strFunc string, nLineNo int) (int64, bool) {
 
 //统计error次数(incr error counts)
 func (s *statistic) error(strFile, strFunc string, nLineNo int) {
+	if !enableStats {
+		return
+	}
 	strKey := getCallerStoreKey(strFile, strFunc)
 	if v, ok := s.callers.Load(strKey); ok {
 
@@ -269,7 +277,9 @@ func (s *statistic) report(args ...interface{}) string {
 }
 
 func checkExpire(stic *statistic) {
-
+	if !enableStats {
+		return
+	}
 	for {
 		stic.callers.Range(
 			func(k, v interface{}) bool {

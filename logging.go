@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+
 var colorStdout = colorable.NewColorableStdout()
 
 var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
@@ -112,6 +113,10 @@ func init() {
 		SetLevel(LEVEL_DEBUG)
 	}
 	go cleanBackupLog()
+}
+
+func EnableStats(enable bool) {
+	enableStats = enable
 }
 
 func Open(strUrl string, opts ...Option) bool {
