@@ -21,7 +21,7 @@ const (
 var (
 	FUNCNAME_ALL = "all"
 	FUNCNAME_NIL = ""
-	enableStats  bool
+	enableStats  = true
 )
 
 type statistic struct {
@@ -148,6 +148,7 @@ func getRoutineId() (strRoutine string) {
 //进入方法(enter function)
 func (s *statistic) enter(strFile, strFunc string, nLineNo int) {
 	if !enableStats {
+		Warnf("log statistics is disabled")
 		return
 	}
 	now64 := getMicroSec()

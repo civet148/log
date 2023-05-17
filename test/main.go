@@ -73,7 +73,7 @@ var mutex sync.Mutex
 func main() {
 
 	log.Enter()
-
+	defer log.Leave()
 	strUrl := "test.log" //指定当前目录创建日志文件（Windows+linux通用）
 	//strUrl := "file://e:/test.log" //指定日志文件但不指定属性（Windows）
 	//strUrl := "file:///tmp/test.log" //指定日志文件但不指定属性(Linux)
