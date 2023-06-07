@@ -83,17 +83,18 @@ func main() {
 	//strUrl := "file://e:/test.log?log_level=WARN&file_size=50" //Windows文件带属性
 
 	log.Open(strUrl, log.Option{
-		LogLevel:     log.LEVEL_DEBUG,
+		LogLevel:     log.LEVEL_TRACE,
 		FileSize:     100, //MB
 		MaxBackups:   10,
 		CloseConsole: false,
 	})
 	defer log.Close()
 
-	//log.SetLevel("info") //设置日志输出级别
+	//log.SetLevel("trace") //设置日志输出级别
 	//log.SetFileSize(1) //设置最大单个文件大小(单位：MB)
 	//log.SetMaxBackup(5) //最多保留备份日志文件数量
 
+	log.Tracef("This is trace message")
 	log.Debugf("This is debug message")
 	log.Infof("This is info message")
 	log.Warnf("This is warn message")

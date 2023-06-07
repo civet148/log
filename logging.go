@@ -17,23 +17,23 @@ import (
 	"time"
 )
 
-
 var colorStdout = colorable.NewColorableStdout()
 
-var LevelName = []string{"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
+var LevelName = []string{"[TRACE]", "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
 
 const (
 	ENV_LOG_LEVEL = "LOG_LEVEL"
 )
 
 const (
-	LEVEL_DEBUG = 0
-	LEVEL_INFO  = 1
-	LEVEL_WARN  = 2
-	LEVEL_ERROR = 3
-	LEVEL_FATAL = 4
-	LEVEL_PANIC = 5
-	LEVEL_JSON  = 6
+	LEVEL_TRACE = 0
+	LEVEL_DEBUG = 1
+	LEVEL_INFO  = 2
+	LEVEL_WARN  = 3
+	LEVEL_ERROR = 4
+	LEVEL_FATAL = 5
+	LEVEL_PANIC = 6
+	LEVEL_JSON  = 7
 )
 
 type LogContent struct {
@@ -109,8 +109,6 @@ func init() {
 	strEnvLevel := os.Getenv(ENV_LOG_LEVEL)
 	if strEnvLevel != "" {
 		SetLevel(strEnvLevel)
-	} else {
-		SetLevel(LEVEL_DEBUG)
 	}
 	go cleanBackupLog()
 }
@@ -122,7 +120,6 @@ func EnableStats(enable bool) {
 func Open(strUrl string, opts ...Option) bool {
 
 	if strUrl == "" {
-
 		Error("Open url is nil")
 		return false
 	}
@@ -171,21 +168,23 @@ func SetLevel(level interface{}) {
 	case string:
 		strLevel := strings.ToLower(level.(string))
 		switch strLevel {
+		case "trace":
+			nLevel = LEVEL_TRACE
 		case "debug":
-			nLevel = 0
+			nLevel = LEVEL_DEBUG
 		case "info":
-			nLevel = 1
+			nLevel = LEVEL_INFO
 		case "warn", "warning":
-			nLevel = 2
+			nLevel = LEVEL_WARN
 		case "error":
-			nLevel = 3
+			nLevel = LEVEL_ERROR
 		case "fatal":
-			nLevel = 4
+			nLevel = LEVEL_FATAL
 		}
 	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		nLevel, _ = strconv.Atoi(fmt.Sprintf("%v", level))
 	default:
-		panic("not support yet")
+		nLevel = LEVEL_INFO
 	}
 	option.LogLevel = nLevel
 }
@@ -286,7 +285,8 @@ func getLevel(name string) (idx int) {
 
 	name = "[" + name + "]"
 	switch name {
-
+	case LevelName[LEVEL_TRACE]:
+		idx = LEVEL_TRACE
 	case LevelName[LEVEL_DEBUG]:
 		idx = LEVEL_DEBUG
 	case LevelName[LEVEL_INFO]:
@@ -302,7 +302,6 @@ func getLevel(name string) (idx int) {
 	default:
 		idx = LEVEL_INFO
 	}
-
 	return
 }
 
@@ -343,6 +342,8 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	strPID := fmt.Sprintf("PID:%d", os.Getpid())
 	Name := LevelName[level]
 	switch level {
+	case LEVEL_TRACE:
+		colorTimeName = fmt.Sprintf("\033[38m%v %s %s", strTimeFmt, strPID, Name)
 	case LEVEL_DEBUG:
 		colorTimeName = fmt.Sprintf("\033[34m%v %s %s", strTimeFmt, strPID, Name)
 	case LEVEL_INFO:
@@ -368,6 +369,7 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	strFile, strFunc, nLineNo = getCaller(3)
 	code = "<" + strFile + ":" + strconv.Itoa(nLineNo) + " " + strFunc + "()" + ">"
 	if level < option.LogLevel {
+		fmt.Printf("level %d < %d\n", level, option.LogLevel)
 		return
 	}
 
@@ -441,6 +443,11 @@ func fmtStringW(args ...interface{}) (strOut string) {
 }
 
 //输出调试级别信息
+func Trace(args ...interface{}) {
+	output(LEVEL_TRACE, fmtString(args...))
+}
+
+//输出调试级别信息
 func Debug(args ...interface{}) {
 	output(LEVEL_DEBUG, fmtString(args...))
 }
@@ -480,6 +487,11 @@ func Panic(args ...interface{}) {
 }
 
 //输出调试级别信息
+func Tracef(fmtstr string, args ...interface{}) {
+	output(LEVEL_TRACE, fmtstr, args...)
+}
+
+//输出调试级别信息
 func Debugf(fmtstr string, args ...interface{}) {
 	output(LEVEL_DEBUG, fmtstr, args...)
 }
@@ -511,6 +523,11 @@ func Fatalf(fmtstr string, args ...interface{}) error {
 	err := fmt.Errorf(fmtstr, args...)
 	stic.error(output(LEVEL_FATAL, err.Error()))
 	return err
+}
+
+//输出Trace级别信息
+func Tracew(args ...interface{}) {
+	output(LEVEL_DEBUG, fmtStringW(args...))
 }
 
 //输出调试级别信息
