@@ -6,11 +6,12 @@ import (
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
 	"log"
-	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +21,11 @@ import (
 var colorStdout = colorable.NewColorableStdout()
 
 var LevelName = []string{"[TRACE]", "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
+
+const (
+	DefaultLogSize    = 1024 //MB
+	DefaultMaxBackups = 31
+)
 
 const (
 	ENV_LOG_LEVEL = "LOG_LEVEL"
@@ -48,7 +54,7 @@ type LogJson struct {
 	LogCon LogContent `json:"log"`
 }
 
-type LogUrl struct {
+type logInfo struct {
 	Path     string //文件路径
 	Host     string //主机名（文件路径）
 	Fragment string //无用
@@ -58,6 +64,8 @@ type LogUrl struct {
 	User     string //用户名
 	Password string //密码
 	locker   sync.RWMutex
+	logFile  *os.File    //日志文件对象
+	logger   *log.Logger //日志输出对象
 }
 
 type Option struct {
@@ -66,15 +74,12 @@ type Option struct {
 	MaxBackups   int    //文件最大分割数
 	CloseConsole bool   //开启/关闭终端屏幕输出
 	filePath     string //文件日志路径
-
 }
 
 //全局变量
 var (
-	logFile *os.File    //日志文件对象
-	logger  *log.Logger //日志输出对象
-	logUrl  LogUrl      //URL解析对象
-	option  Option      //日志参数选项
+	loginf logInfo //日志信息对象
+	option Option  //日志参数选项
 )
 
 /**  打开日志
@@ -104,54 +109,36 @@ var (
 //var colorStdout = colorable.NewColorableStdout()
 
 func init() {
-	option.FileSize = 1024 //MB
-	option.MaxBackups = 31
+	option.FileSize = DefaultLogSize //MB
+	option.MaxBackups = DefaultMaxBackups
 	strEnvLevel := os.Getenv(ENV_LOG_LEVEL)
 	if strEnvLevel != "" {
 		SetLevel(strEnvLevel)
 	}
-	go cleanBackupLog()
 }
 
 func EnableStats(enable bool) {
 	enableStats = enable
 }
 
-func Open(strUrl string, opts ...Option) bool {
-
-	if strUrl == "" {
-		Error("Open url is nil")
-		return false
+func Open(strPath string, opts ...Option) error {
+	if strPath == "" {
+		return Error("log file is nil")
 	}
-
-	err := logUrl.parseUrl(strUrl)
+	err := loginf.open(strPath, opts...)
 	if err != nil {
-		Error("%s", err)
-		return false
+		return Error("%s", err)
 	}
-
-	if logUrl.Scheme == "file" || logUrl.Scheme == "" { //以 'file://' 开头的URL或者没有协议名
-		return logUrl.createFile() //创建文件
-	} else {
-		Error("Unknown scheme [%s]", logUrl.Scheme)
-	}
-
-	if len(opts) > 0 {
-		option = opts[0]
-	}
-	return true
+	go backupLogFile()
+	return nil
 }
 
 //关闭日志
 func Close() {
-	if logFile != nil {
-
-		err := logFile.Close()
-		if err != nil {
-			Error("%s", err)
-			return
-		}
-		logFile = nil
+	err := loginf.closeFile()
+	if err != nil {
+		Error("%s", err)
+		return
 	}
 }
 
@@ -200,75 +187,126 @@ func SetMaxBackup(nMaxBackups int) {
 }
 
 //定期清理日志，仅保留MaxBackups个数的日志
-func cleanBackupLog() {
+func backupLogFile() {
 	for {
-
-		time.Sleep(1 * time.Hour)
+		_ = loginf.renameFile()
+		_ = loginf.cleanBackupLog()
+		time.Sleep(5 * time.Second)
 	}
 }
 
-//解析Url
-func (lu *LogUrl) parseUrl(strUrl string) (err error) {
-
-	var querys url.Values
-	var u *url.URL
-	u, err = url.Parse(strUrl)
-	if err != nil {
+func (m *logInfo) Println(args ...interface{}) {
+	if loginf.logger == nil {
 		return
 	}
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	loginf.logger.Println(args...)
+}
 
-	lu.Path = u.Path
-	lu.Host = u.Host
-	lu.Scheme = u.Scheme
-	if u.User != nil {
-		lu.User = u.User.Username()
-		lu.Password, _ = u.User.Password()
+func (m *logInfo) open(strPath string, opts ...Option) (err error) {
+	if len(opts) > 0 {
+		option = opts[0]
 	}
-	querys, err = url.ParseQuery(u.RawQuery)
-	if err != nil {
-		return
+	option.filePath = strPath
+	if option.FileSize == 0 {
+		option.FileSize = DefaultLogSize
 	}
+	if option.MaxBackups == 0 {
+		option.MaxBackups = DefaultMaxBackups
+	}
+	return m.createFile() //创建文件
+}
 
-	option.filePath = lu.Host + lu.Path
+//关闭日志文件
+func (m *logInfo) closeFile() error {
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	if loginf.logFile == nil {
+		return nil
+	}
+	_ = loginf.logFile.Close()
+	loginf.logFile = nil
+	return nil
+}
 
-	//Info("scheme [%s] host [%s] path [%s] querys [%s]", lu.Scheme, lu.Host, lu.Path, querys)
-	for k, v := range querys {
-		//Info("key = [%s] v = [%s]", k, v[0])
-		switch k {
-		case "file_size":
-			option.FileSize, _ = strconv.Atoi(v[0])
-		case "log_level":
-			option.LogLevel = getLevel(v[0])
-		case "max_backups":
-			option.MaxBackups, _ = strconv.Atoi(v[0])
-		case "console":
-			Console, _ := strconv.ParseBool(v[0])
-			option.CloseConsole = !Console
+//清理已过期备份
+func (m *logInfo) cleanBackupLog() error {
+	var files []os.FileInfo
+	strPath := option.filePath
+	if strPath == "" {
+		return nil
+	}
+	dir, filename := filepath.Split(strPath)
+	if dir == "" {
+		dir = "."
+	}
+	match := filename + "."
+	filepath.Walk(dir,
+		func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			if strings.Index(info.Name(), match) != -1 {
+				files = append(files, info)
+			}
+			return nil
+		})
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Unix() > files[j].ModTime().Unix()
+	})
+	count := len(files)
+	if count > option.MaxBackups && option.MaxBackups != 0 {
+		for i := option.MaxBackups - 1; i < count; i++ {
+			strFilePath := filepath.Join(dir, files[i].Name())
+			_ = os.Remove(strFilePath)
 		}
 	}
+	return nil
+}
 
-	return
+//关闭日志文件
+func (m *logInfo) renameFile() (err error) {
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	if loginf.logFile == nil {
+		return nil
+	}
+	fi, err := os.Stat(option.filePath)
+	if err != nil {
+		return err
+	}
+	fs := fi.Size()
+	renameSize := option.FileSize * 1024 * 1024
+	if fs > int64(renameSize) {
+		_ = loginf.logFile.Close()
+		datetime := time.Now().Format("20060102150405")
+		var strPath string
+		strPath = fmt.Sprintf("%v.%v", option.filePath, datetime) //日志文件有后缀(日志备份文件名格式不能随意改动)
+		err = os.Rename(option.filePath, strPath)                 //将文件备份
+		if err != nil {
+			return err
+		}
+		loginf.logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+		loginf.logger = log.New(loginf.logFile, "", log.Lmicroseconds|log.LstdFlags)
+	}
+	return nil
 }
 
 //创建日志文件
-func (lu *LogUrl) createFile() bool {
+func (m *logInfo) createFile() error {
 	var err error
-
-	//判断日志文件后缀名合法性
-	//if strings.Index(option.filePath, ".") == -1 {
-	//	panic("log file path illegal, must contain dot suffix [日志文件必须带.后缀名]")
-	//}
-	lu.locker.Lock()
-	defer lu.locker.Unlock()
-	logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	loginf.logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		Error("Open log file ", option.filePath, " failed ", err)
-		return false
+		return Error("Open log file ", option.filePath, " failed ", err)
 	}
-
-	logger = log.New(logFile, "", log.Lmicroseconds|log.LstdFlags)
-
-	return true
+	loginf.logger = log.New(loginf.logFile, "", log.Lmicroseconds|log.LstdFlags)
+	return nil
 }
 
 //截取函数名称
@@ -391,30 +429,8 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	}
 
 	//输出到文件（如果Open函数传入了正确的文件路径）
-	if logger != nil {
-		fi, e := os.Stat(option.filePath)
-		if e == nil {
-			fs := fi.Size()
-			if fs > int64(option.FileSize*1024*1024) {
+	loginf.Println(Name + " " + strRoutine + " " + code + " " + inf)
 
-				logFile.Close()
-				datetime := time.Now().Format("20060102_150405")
-				var newpath string
-				newpath = fmt.Sprintf("%v.%v", option.filePath, datetime) //日志文件有后缀(日志备份文件名格式不能随意改动)
-				e = os.Rename(option.filePath, newpath)                   //将文件备份
-				if e != nil {
-					Error("%s", e)
-					return
-				} else {
-					logUrl.createFile() //重新创建文件
-				}
-			}
-		} else {
-			logUrl.createFile() //重新创建文件
-		}
-
-		logger.Println(Name + " " + strRoutine + " " + code + " " + inf)
-	}
 	return
 }
 

@@ -74,33 +74,30 @@ func main() {
 
 	log.Enter()
 	defer log.Leave()
-	strUrl := "test.log" //指定当前目录创建日志文件（Windows+linux通用）
-	//strUrl := "file://e:/test.log" //指定日志文件但不指定属性（Windows）
-	//strUrl := "file:///tmp/test.log" //指定日志文件但不指定属性(Linux)
-	//strUrl := "json:///tmp/test.json" //json文件名(Linux)
-	//strUrl := "json://f:/test/test.json" //json文件名(Windows)
-	//strUrl := "file:///var/log/test.log?log_level=INFO&file_size=50" //Linux/Unix文件带属性
-	//strUrl := "file://e:/test.log?log_level=WARN&file_size=50" //Windows文件带属性
 
-	log.Open(strUrl, log.Option{
+	log.Open("test.log", log.Option{
 		LogLevel:     log.LEVEL_TRACE,
-		FileSize:     100, //MB
-		MaxBackups:   10,
-		CloseConsole: false,
+		FileSize:     1, //MB
+		MaxBackups:   3,
+		CloseConsole: true,
 	})
 	defer log.Close()
 
-	//log.SetLevel("trace") //设置日志输出级别
+	log.SetLevel("trace") //设置日志输出级别
 	//log.SetFileSize(1) //设置最大单个文件大小(单位：MB)
 	//log.SetMaxBackup(5) //最多保留备份日志文件数量
 
-	log.Tracef("This is trace message")
-	log.Debugf("This is debug message")
-	log.Infof("This is info message")
-	log.Warnf("This is warn message")
-	log.Errorf("This is error message")
-	log.Fatalf("This is fatal message")
-	log.Truncate(log.LEVEL_INFO, 26, "this is a truncate message log [%s]", "hello")
+	for {
+		log.Tracef("This is trace message")
+		log.Debugf("This is debug message")
+		log.Infof("This is info message")
+		log.Warnf("This is warn message")
+		log.Errorf("This is error message")
+		log.Fatalf("This is fatal message")
+		log.Truncate(log.LEVEL_INFO, 16, "this is a truncate message log [%s]", "hello")
+		time.Sleep(3 * time.Second)
+	}
+
 	//log.Panic("this function will call panic")
 
 	//wg := &sync.WaitGroup{}
