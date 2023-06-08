@@ -7,34 +7,6 @@ import (
 	"time"
 )
 
-/**
-* 1. 通过参数直接指定日志文件、输出级别(DEBUG,INFO,WARN,ERROR, FATAL)和属性
-*
-*	1.1. 直接输入文件名
-*	Open("test.log")
-*
-*	1.2. 设置文件日志输出级别和分块大小(单位：MB)
-*  	Open("file:///var/log/test.log?log_level=INFO&file_size=50")
-*
-*	1.3. 设置文件日志输出级别和分块大小(单位：MB)及邮件通知级别、邮件地址、邮件标题
-*	Open("file:///var/log/test.log?log_level=INFO&file_size=50&email_level=FATAL&email=civet148@126.com&email_title=service-error-message")
-*
-* 2. 	通过指定json配置文件设置日志级别、日志文件及属性
-*
-*   2.1. 指定json配置文件
-*   Open("json:///tmp/test.json")
-*
-*   test.json 范例
-*   {
-*      "file_path":"/tmp/test.log",
-*      "log_level":"INFO",
-*      "file_size":"50",
-*      "email_level":"FATAL",
-*      "email_addr":"civet126@126.com",
-*      "email_title":"error message title"
-*   }
- */
-
 type SubSubSt struct {
 	Name string
 }
@@ -86,7 +58,7 @@ func main() {
 	//log.SetFileSize(1) //设置最大单个文件大小(单位：MB)
 	//log.SetMaxBackup(5) //最多保留备份日志文件数量
 
-	for {
+	for i := 0; i < 10000; i++ {
 		log.Tracef("This is trace message")
 		log.Debugf("This is debug message")
 		log.Infof("This is info message")
@@ -94,7 +66,7 @@ func main() {
 		log.Errorf("This is error message")
 		log.Fatalf("This is fatal message")
 		log.Truncate(log.LEVEL_INFO, 16, "this is a truncate message log [%s]", "hello")
-		time.Sleep(3 * time.Second)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	//log.Panic("this function will call panic")
