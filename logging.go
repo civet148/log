@@ -42,30 +42,10 @@ const (
 	LEVEL_JSON  = 7
 )
 
-type LogContent struct {
-	FilePath   string `json:"file_path"`
-	LogLevel   string `json:"log_level"`
-	FileSize   int    `json:"file_size"`
-	MaxBackups int    `json:"max_backups"`
-	Console    bool   `json:"console"`
-}
-
-type LogJson struct {
-	LogCon LogContent `json:"log"`
-}
-
 type logInfo struct {
-	Path     string //文件路径
-	Host     string //主机名（文件路径）
-	Fragment string //无用
-	Rawpath  string //无用
-	Rawquery string //无用
-	Scheme   string //协议名
-	User     string //用户名
-	Password string //密码
-	locker   sync.RWMutex
-	logFile  *os.File    //日志文件对象
-	logger   *log.Logger //日志输出对象
+	locker  sync.RWMutex
+	logFile *os.File    //日志文件对象
+	logger  *log.Logger //日志输出对象
 }
 
 type Option struct {
@@ -81,32 +61,6 @@ var (
 	loginf logInfo //日志信息对象
 	option Option  //日志参数选项
 )
-
-/**  打开日志
-* 1. 通过参数直接指定日志文件、输出级别(DEBUG,INFO,WARN,ERROR, FATAL)和属性
-*
-*	1.1. 直接输入文件名
-*	Open("test.log")
-*
-*	1.2. 设置文件日志输出级别和分块大小(单位：MB)以及备份文件数
-*  	Open("file:///var/log/test.log?log_level=INFO&file_size=50&max_backups=10")
-*
-* 2. 通过指定json配置文件设置日志级别、日志文件及属性
-*
-*   2.1. 指定json配置文件
-*   Open("json:///etc/test.json")
-*
-   JSON范例：
-   {
-      "file_path":"/tmp/test.log",
-      "log_level":"INFO",
-      "file_size":"1024",
-      "max_backups": 10,
-      "console": true,
-   }
-*/
-
-//var colorStdout = colorable.NewColorableStdout()
 
 func init() {
 	option.FileSize = DefaultLogSize //MB

@@ -76,10 +76,9 @@ func main() {
 	defer log.Leave()
 
 	log.Open("test.log", log.Option{
-		LogLevel:     log.LEVEL_TRACE,
-		FileSize:     1, //MB
-		MaxBackups:   3,
-		CloseConsole: true,
+		LogLevel:   log.LEVEL_TRACE,
+		FileSize:   1, //MB
+		MaxBackups: 3,
 	})
 	defer log.Close()
 
