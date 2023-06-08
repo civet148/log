@@ -145,7 +145,7 @@ func backupLogFile() {
 	for {
 		_ = loginf.renameFile()
 		_ = loginf.cleanBackupLog()
-		time.Sleep(5 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
 
@@ -221,8 +221,6 @@ func (m *logInfo) cleanBackupLog() error {
 
 //关闭日志文件
 func (m *logInfo) renameFile() (err error) {
-	m.locker.Lock()
-	defer m.locker.Unlock()
 	if loginf.logFile == nil {
 		return nil
 	}
@@ -232,6 +230,10 @@ func (m *logInfo) renameFile() (err error) {
 	}
 	fs := fi.Size()
 	renameSize := option.FileSize * 1024 * 1024
+
+	m.locker.Lock()
+	defer m.locker.Unlock()
+
 	if fs > int64(renameSize) {
 		_ = loginf.logFile.Close()
 		datetime := time.Now().Format("20060102150405")
