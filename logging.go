@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/mattn/go-colorable"
 	"log"
 	"os"
 	"path"
@@ -101,7 +100,7 @@ func SetFileSize(size int) {
 	option.FileSize = size
 }
 
-//设置日志级别(字符串型: debug/info/warn/error/fatal 数值型: 0=DEBUG 1=INFO 2=WARN 3=ERROR 4=FATAL)
+//设置日志级别(字符串型: trace/debug/info/warn/error/fatal 数值型: 0=TRACE 1 =DEBUG 2=INFO 3=WARN 4=ERROR 5=FATAL)
 func SetLevel(level interface{}) {
 
 	var nLevel int
