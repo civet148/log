@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 	"log"
 	"os"
 	"path"
@@ -55,7 +56,7 @@ type Option struct {
 	filePath     string //文件日志路径
 }
 
-//全局变量
+// 全局变量
 var (
 	loginf logInfo //日志信息对象
 	option Option  //日志参数选项
@@ -86,7 +87,7 @@ func Open(strPath string, opts ...Option) error {
 	return nil
 }
 
-//关闭日志
+// 关闭日志
 func Close() {
 	err := loginf.closeFile()
 	if err != nil {
@@ -95,12 +96,12 @@ func Close() {
 	}
 }
 
-//设置日志文件分割大小（MB)
+// 设置日志文件分割大小（MB)
 func SetFileSize(size int) {
 	option.FileSize = size
 }
 
-//设置日志级别(字符串型: trace/debug/info/warn/error/fatal 数值型: 0=TRACE 1 =DEBUG 2=INFO 3=WARN 4=ERROR 5=FATAL)
+// 设置日志级别(字符串型: trace/debug/info/warn/error/fatal 数值型: 0=TRACE 1 =DEBUG 2=INFO 3=WARN 4=ERROR 5=FATAL)
 func SetLevel(level interface{}) {
 
 	var nLevel int
@@ -129,17 +130,17 @@ func SetLevel(level interface{}) {
 	option.LogLevel = nLevel
 }
 
-//设置关闭/开启屏幕输出
+// 设置关闭/开启屏幕输出
 func CloseConsole(ok bool) {
 	option.CloseConsole = ok
 }
 
-//设置最大备份数量
+// 设置最大备份数量
 func SetMaxBackup(nMaxBackups int) {
 	option.MaxBackups = nMaxBackups
 }
 
-//定期清理日志，仅保留MaxBackups个数的日志
+// 定期清理日志，仅保留MaxBackups个数的日志
 func backupLogFile() {
 	for {
 		_ = loginf.renameFile()
@@ -171,7 +172,7 @@ func (m *logInfo) open(strPath string, opts ...Option) (err error) {
 	return m.createFile() //创建文件
 }
 
-//关闭日志文件
+// 关闭日志文件
 func (m *logInfo) closeFile() error {
 	m.locker.Lock()
 	defer m.locker.Unlock()
@@ -183,7 +184,7 @@ func (m *logInfo) closeFile() error {
 	return nil
 }
 
-//清理已过期备份
+// 清理已过期备份
 func (m *logInfo) cleanBackupLog() error {
 	var files []os.FileInfo
 	strPath := option.filePath
@@ -218,7 +219,7 @@ func (m *logInfo) cleanBackupLog() error {
 	return nil
 }
 
-//关闭日志文件
+// 关闭日志文件
 func (m *logInfo) renameFile() (err error) {
 	if loginf.logFile == nil {
 		return nil
@@ -251,7 +252,7 @@ func (m *logInfo) renameFile() (err error) {
 	return nil
 }
 
-//创建日志文件
+// 创建日志文件
 func (m *logInfo) createFile() error {
 	var err error
 	m.locker.Lock()
@@ -264,7 +265,7 @@ func (m *logInfo) createFile() error {
 	return nil
 }
 
-//截取函数名称
+// 截取函数名称
 func getFuncName(pc uintptr) (name string) {
 
 	n := runtime.FuncForPC(pc).Name()
@@ -273,7 +274,7 @@ func getFuncName(pc uintptr) (name string) {
 	return
 }
 
-//通过级别名称获取索引
+// 通过级别名称获取索引
 func getLevel(name string) (idx int) {
 
 	name = "[" + name + "]"
@@ -325,7 +326,7 @@ func getStack(skip, n int) string {
 	return strStack
 }
 
-//内部格式化输出函数
+// 内部格式化输出函数
 func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc string, nLineNo int) {
 	var inf, code string
 	var colorTimeName string
@@ -362,7 +363,6 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	strFile, strFunc, nLineNo = getCaller(3)
 	code = "<" + strFile + ":" + strconv.Itoa(nLineNo) + " " + strFunc + "()" + ">"
 	if level < option.LogLevel {
-		fmt.Printf("level %d < %d\n", level, option.LogLevel)
 		return
 	}
 
@@ -413,130 +413,130 @@ func fmtStringW(args ...interface{}) (strOut string) {
 	return strings.Join(strArgs, " ")
 }
 
-//输出调试级别信息
+// 输出调试级别信息
 func Trace(args ...interface{}) {
 	output(LEVEL_TRACE, fmtString(args...))
 }
 
-//输出调试级别信息
+// 输出调试级别信息
 func Debug(args ...interface{}) {
 	output(LEVEL_DEBUG, fmtString(args...))
 }
 
-//输出运行级别信息
+// 输出运行级别信息
 func Info(args ...interface{}) {
 	output(LEVEL_INFO, fmtString(args...))
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warn(args ...interface{}) {
 	output(LEVEL_WARN, fmtString(args...))
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warning(args ...interface{}) {
 	output(LEVEL_WARN, fmtString(args...))
 }
 
-//输出错误级别信息
+// 输出错误级别信息
 func Error(args ...interface{}) error {
 	err := fmt.Errorf(fmtString(args...))
 	stic.error(output(LEVEL_ERROR, err.Error()))
 	return err
 }
 
-//输出危险级别信息
+// 输出危险级别信息
 func Fatal(args ...interface{}) error {
 	err := fmt.Errorf(fmtString(args...))
 	stic.error(output(LEVEL_FATAL, err.Error()))
 	return err
 }
 
-//panic
+// panic
 func Panic(args ...interface{}) {
 	panic(fmt.Sprintf(fmtString(args...)))
 }
 
-//输出调试级别信息
+// 输出调试级别信息
 func Tracef(fmtstr string, args ...interface{}) {
 	output(LEVEL_TRACE, fmtstr, args...)
 }
 
-//输出调试级别信息
+// 输出调试级别信息
 func Debugf(fmtstr string, args ...interface{}) {
 	output(LEVEL_DEBUG, fmtstr, args...)
 }
 
-//输出运行级别信息
+// 输出运行级别信息
 func Infof(fmtstr string, args ...interface{}) {
 	output(LEVEL_INFO, fmtstr, args...)
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warnf(fmtstr string, args ...interface{}) {
 	output(LEVEL_WARN, fmtstr, args...)
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warningf(fmtstr string, args ...interface{}) {
 	output(LEVEL_WARN, fmtstr, args...)
 }
 
-//输出错误级别信息
+// 输出错误级别信息
 func Errorf(fmtstr string, args ...interface{}) error {
 	err := fmt.Errorf(fmtstr, args...)
 	stic.error(output(LEVEL_ERROR, err.Error()))
 	return err
 }
 
-//输出危险级别信息
+// 输出危险级别信息
 func Fatalf(fmtstr string, args ...interface{}) error {
 	err := fmt.Errorf(fmtstr, args...)
 	stic.error(output(LEVEL_FATAL, err.Error()))
 	return err
 }
 
-//输出Trace级别信息
+// 输出Trace级别信息
 func Tracew(args ...interface{}) {
 	output(LEVEL_DEBUG, fmtStringW(args...))
 }
 
-//输出调试级别信息
+// 输出调试级别信息
 func Debugw(args ...interface{}) {
 	output(LEVEL_DEBUG, fmtStringW(args...))
 }
 
-//输出运行级别信息
+// 输出运行级别信息
 func Infow(args ...interface{}) {
 	output(LEVEL_INFO, fmtStringW(args...))
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warnw(args ...interface{}) {
 	output(LEVEL_WARN, fmtStringW(args...))
 }
 
-//输出警告级别信息
+// 输出警告级别信息
 func Warningw(args ...interface{}) {
 	output(LEVEL_WARN, fmtStringW(args...))
 }
 
-//输出错误级别信息
+// 输出错误级别信息
 func Errorw(args ...interface{}) {
 	stic.error(output(LEVEL_ERROR, fmtStringW(args...)))
 }
 
-//输出危险级别信息
+// 输出危险级别信息
 func Fatalw(args ...interface{}) {
 	stic.error(output(LEVEL_FATAL, fmtStringW(args...)))
 }
 
-//panic
+// panic
 func Panicw(args ...interface{}) {
 	panic(fmt.Sprintf(fmtStringW(args...)))
 }
 
-//输出到空设备
+// 输出到空设备
 func Null(fmtstr string, args ...interface{}) {
 }
 
@@ -548,14 +548,14 @@ func Truncate(level, size int, fmtstr string, args ...interface{}) {
 	output(level, strOutput)
 }
 
-//进入方法（统计）
+// 进入方法（统计）
 func Enter(args ...interface{}) {
 	output(LEVEL_INFO, "enter ", args...)
 	stic.enter(getCaller(2))
 }
 
-//离开方法（统计）
-//返回执行时间：h 时 m 分 s 秒 ms 毫秒 （必须先调用Enter方法才能正确统计执行时间）
+// 离开方法（统计）
+// 返回执行时间：h 时 m 分 s 秒 ms 毫秒 （必须先调用Enter方法才能正确统计执行时间）
 func Leave() (h, m, s int, ms float32) {
 
 	if nSpendTime, ok := stic.leave(getCaller(2)); ok {
@@ -565,7 +565,7 @@ func Leave() (h, m, s int, ms float32) {
 	return
 }
 
-//打印结构体JSON
+// 打印结构体JSON
 func Json(args ...interface{}) {
 
 	var strOutput string
@@ -584,12 +584,12 @@ func JsonDebugString(v interface{}) string {
 	return string(data)
 }
 
-//args: a string of function name or nil for all
+// args: a string of function name or nil for all
 func Report(args ...interface{}) string {
 	return stic.report(args...)
 }
 
-//打印结构体
+// 打印结构体
 func Struct(args ...interface{}) {
 
 	var strLog string
@@ -618,7 +618,7 @@ func Struct(args ...interface{}) {
 	}
 }
 
-//将字段值存到其他类型的变量中
+// 将字段值存到其他类型的变量中
 func fmtStruct(deep int, typ reflect.Type, val reflect.Value, args ...interface{}) (strLog string) {
 
 	kind := typ.Kind()
