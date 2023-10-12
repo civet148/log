@@ -58,7 +58,7 @@ func main() {
 	//log.SetFileSize(1) //设置最大单个文件大小(单位：MB)
 	//log.SetMaxBackup(5) //最多保留备份日志文件数量
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1; i++ {
 		log.Tracef("This is trace message")
 		log.Debugf("This is debug message")
 		log.Infof("This is info message")
@@ -99,6 +99,7 @@ func main() {
 	//log.Errorw("This is error message level = ", 3, "Errorw")
 	//log.Fatalw("This is fatal message level = ", 4, "Fatalw")
 	log.StartProf("127.0.0.1:4000")
+	log.Printf("this is %s", "a fmt.Println message")
 }
 
 func PrintFuncExecuteTime(i int, wg *sync.WaitGroup) {

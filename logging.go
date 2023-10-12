@@ -413,6 +413,11 @@ func fmtStringW(args ...interface{}) (strOut string) {
 	return strings.Join(strArgs, " ")
 }
 
+func Printf(args ...interface{}) {
+	strPrint := fmtString(args...)
+	fmt.Println(strPrint)
+}
+
 // 输出调试级别信息
 func Trace(args ...interface{}) {
 	output(LEVEL_TRACE, fmtString(args...))
