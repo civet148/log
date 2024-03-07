@@ -59,16 +59,14 @@ type Option struct {
 // 全局变量
 var (
 	loginf logInfo //日志信息对象
-	option Option  //日志参数选项
+	option = Option{
+		LogLevel:   LEVEL_INFO,
+		FileSize:   DefaultLogSize,
+		MaxBackups: DefaultMaxBackups,
+	} //日志参数选项
 )
 
 func init() {
-	option.FileSize = DefaultLogSize //MB
-	option.MaxBackups = DefaultMaxBackups
-	strEnvLevel := os.Getenv(ENV_LOG_LEVEL)
-	if strEnvLevel != "" {
-		SetLevel(strEnvLevel)
-	}
 }
 
 func EnableStats(enable bool) {
