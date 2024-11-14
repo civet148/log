@@ -250,9 +250,48 @@ func (m *logInfo) renameFile() (err error) {
 	return nil
 }
 
+// getDirFromPath从给定的完整文件路径中提取出目录部分
+func getDirFromPath(path string) string {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' || path[i] == '\\' {
+			return path[:i]
+		}
+	}
+	return ""
+}
+
+// createDirIfNotExist检查目录是否存在，如果不存在则创建
+func createDirIfNotExist(dir string) error {
+	var ignoreDirs = []string{
+		"",
+		".",
+		"..",
+		"./",
+		"../",
+	}
+	dir = strings.TrimSpace(dir)
+	for _, d := range ignoreDirs {
+		if d == dir {
+			return nil
+		}
+	}
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		// 如果目录不存在，则创建目录，权限设置为0755（可根据需求调整）
+		return os.MkdirAll(dir, os.ModePerm)
+	}
+	return err
+}
+
 // 创建日志文件
 func (m *logInfo) createFile() error {
 	var err error
+	//检查目录路径是否存在，不存在自动创建目录和子目录
+	dir := getDirFromPath(option.filePath)
+	err = createDirIfNotExist(dir)
+	if err != nil {
+		return err
+	}
 	m.locker.Lock()
 	defer m.locker.Unlock()
 	loginf.logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -697,3 +736,4 @@ func fmtDeep(nDeep int) (s string) {
 	}
 	return
 }
+
