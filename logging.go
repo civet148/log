@@ -364,7 +364,7 @@ func getStack(skip, n int) string {
 }
 
 // 内部格式化输出函数
-func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc string, nLineNo int) {
+func output(level int, formatter interface{}, args ...interface{}) (strFile, strFunc string, nLineNo int) {
 	var inf, code string
 	var colorTimeName string
 
@@ -390,11 +390,18 @@ func output(level int, fmtstr string, args ...interface{}) (strFile, strFunc str
 	default:
 		colorTimeName = fmt.Sprintf("\033[34m%v %s %s", strTimeFmt, strPID, Name)
 	}
-
-	if fmtstr != "" {
-		inf = fmt.Sprintf(fmtstr, args...)
-	} else {
-		inf = fmt.Sprint(args...)
+	var fmtstr string
+	switch formatter.(type) {
+	case string:
+		fmtstr = formatter.(string)
+		if formatter != "" {
+			inf = fmt.Sprintf(fmtstr, args...)
+		} else {
+			inf = fmt.Sprint(args...)
+		}
+	case error:
+		err := formatter.(error)
+		fmtstr = fmt.Sprintf("%v", err.Error())
 	}
 
 	strFile, strFunc, nLineNo = getCaller(3)
@@ -435,6 +442,9 @@ func fmtString(args ...interface{}) (strOut string) {
 			} else {
 				strOut = fmt.Sprint(args...)
 			}
+		case error:
+			err := args[0].(error)
+			strOut = fmt.Sprintf("%s", err.Error())
 		default:
 			strOut = fmt.Sprint(args...)
 		}
@@ -500,41 +510,67 @@ func Panic(args ...interface{}) {
 }
 
 // 输出调试级别信息
-func Tracef(fmtstr string, args ...interface{}) {
-	output(LEVEL_TRACE, fmtstr, args...)
+func Tracef(formatter interface{}, args ...interface{}) {
+	output(LEVEL_TRACE, formatter, args...)
 }
 
 // 输出调试级别信息
-func Debugf(fmtstr string, args ...interface{}) {
-	output(LEVEL_DEBUG, fmtstr, args...)
+func Debugf(formatter interface{}, args ...interface{}) {
+	output(LEVEL_DEBUG, formatter, args...)
 }
 
 // 输出运行级别信息
-func Infof(fmtstr string, args ...interface{}) {
-	output(LEVEL_INFO, fmtstr, args...)
+func Infof(formatter interface{}, args ...interface{}) {
+	output(LEVEL_INFO, formatter, args...)
 }
 
 // 输出警告级别信息
-func Warnf(fmtstr string, args ...interface{}) {
-	output(LEVEL_WARN, fmtstr, args...)
+func Warnf(formatter interface{}, args ...interface{}) {
+	output(LEVEL_WARN, formatter, args...)
 }
 
 // 输出警告级别信息
-func Warningf(fmtstr string, args ...interface{}) {
-	output(LEVEL_WARN, fmtstr, args...)
+func Warningf(formatter interface{}, args ...interface{}) {
+	output(LEVEL_WARN, formatter, args...)
 }
 
 // 输出错误级别信息
-func Errorf(fmtstr string, args ...interface{}) error {
-	err := fmt.Errorf(fmtstr, args...)
+func Errorf(formatter interface{}, args ...interface{}) error {
+	var err error
+	err = formatterToError(formatter, args...)
+	if err == nil {
+		return nil
+	}
 	stic.error(output(LEVEL_ERROR, err.Error()))
 	return err
 }
 
 // 输出危险级别信息
-func Fatalf(fmtstr string, args ...interface{}) error {
-	err := fmt.Errorf(fmtstr, args...)
+func Fatalf(formatter interface{}, args ...interface{}) error {
+	var err error
+	err = formatterToError(formatter, args...)
+	if err == nil {
+		return nil
+	}
 	stic.error(output(LEVEL_FATAL, err.Error()))
+	return err
+}
+
+func formatterToError(formatter interface{}, args ...interface{}) (err error) {
+	var fmtstr string
+	switch formatter.(type) {
+	case string:
+		fmtstr = formatter.(string)
+		if fmtstr != "" {
+			fmtstr = fmt.Sprintf(fmtstr, args...)
+		} else {
+			fmtstr = fmt.Sprint(args...)
+		}
+		err = fmt.Errorf(fmtstr)
+	case error:
+		err = formatter.(error)
+		fmtstr = fmt.Sprintf("%v", err.Error())
+	}
 	return err
 }
 

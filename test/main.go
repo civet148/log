@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/civet148/log"
 	"sync"
 	"sync/atomic"
@@ -46,7 +47,7 @@ func main() {
 
 	log.Enter()
 	defer log.Leave()
-	
+
 	log.Open("./logs/test.log", log.Option{
 		//LogLevel:   log.LEVEL_TRACE,
 		FileSize:   1, //MB
@@ -65,6 +66,7 @@ func main() {
 		log.Warnf("This is warn message")
 		log.Errorf("This is error message")
 		log.Fatalf("This is fatal message")
+		log.Errorf(fmt.Errorf("this is a error object"))
 		log.Truncate(log.LEVEL_INFO, 16, "this is a truncate message log [%s]", "hello")
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -98,7 +100,7 @@ func main() {
 	//log.Warnw("This is warn message level = ", 2, "Warnw")
 	//log.Errorw("This is error message level = ", 3, "Errorw")
 	//log.Fatalw("This is fatal message level = ", 4, "Fatalw")
-	log.StartProf("127.0.0.1:4000")
+	//log.StartProf("127.0.0.1:4000")
 	log.Printf("this is %s", "a fmt.Println message")
 }
 
@@ -132,3 +134,4 @@ func PrintFuncExecuteTime(i int, wg *sync.WaitGroup) {
 	wg.Done()
 	//log.Errorf("done")
 }
+
