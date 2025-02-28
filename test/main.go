@@ -50,8 +50,12 @@ func main() {
 
 	log.Open("./logs/test.log", log.Option{
 		//LogLevel:   log.LEVEL_TRACE,
-		FileSize:   1, //MB
-		MaxBackups: 3,
+		FileSize:     1, //MB
+		MaxBackups:   3,
+		CloseConsole: false, //开启/关闭终端屏幕输出
+		ShowProcess:  false, //显示进程ID
+		ShowRoutine:  false, //显示协程ID
+		ShowCaller:   true,  //显示调用者信息
 	})
 	defer log.Close()
 
@@ -62,9 +66,9 @@ func main() {
 	for i := 0; i < 1; i++ {
 		log.Tracef("This is trace message")
 		log.Debugf("This is debug message")
-		log.Infof("This is info message")
-		log.Warnf("This is warn message")
-		log.Errorf("This is error message")
+		log.Infof("This is %s", "info message")
+		log.Warnf("This is %s", "warn message")
+		log.Errorf("This is %s", "error message")
 		log.Fatalf("This is fatal message")
 		log.Errorf(fmt.Errorf("this is a error object"))
 		log.Truncate(log.LEVEL_INFO, 16, "this is a truncate message log [%s]", "hello")

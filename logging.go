@@ -53,6 +53,9 @@ type Option struct {
 	FileSize     int    //文件日志分割大小(MB)
 	MaxBackups   int    //文件最大分割数
 	CloseConsole bool   //开启/关闭终端屏幕输出
+	ShowProcess  bool   //显示进程ID
+	ShowRoutine  bool   //显示协程ID
+	ShowCaller   bool   //显示调用者信息
 	filePath     string //文件日志路径
 }
 
@@ -77,7 +80,7 @@ func Open(strPath string, opts ...Option) error {
 	if strPath == "" {
 		return Error("log file is nil")
 	}
-	err := loginf.open(strPath, opts...)
+	err := loginf.openWithOptions(strPath, opts...)
 	if err != nil {
 		return Error("%s", err)
 	}
@@ -156,7 +159,7 @@ func (m *logInfo) Println(args ...interface{}) {
 	loginf.logger.Println(args...)
 }
 
-func (m *logInfo) open(strPath string, opts ...Option) (err error) {
+func (m *logInfo) openWithOptions(strPath string, opts ...Option) (err error) {
 	if len(opts) > 0 {
 		option = opts[0]
 	}
@@ -372,6 +375,13 @@ func output(level int, formatter interface{}, args ...interface{}) (strFile, str
 	strRoutine := fmt.Sprintf("{%v}", getRoutineId())
 	strPID := fmt.Sprintf("PID:%d", os.Getpid())
 	Name := LevelName[level]
+	if !option.ShowProcess {
+		strPID = ""
+	}
+	if !option.ShowRoutine {
+		strRoutine = ""
+	}
+
 	switch level {
 	case LEVEL_TRACE:
 		colorTimeName = fmt.Sprintf("\033[38m%v %s %s", strTimeFmt, strPID, Name)
@@ -409,7 +419,9 @@ func output(level int, formatter interface{}, args ...interface{}) (strFile, str
 	if level < option.LogLevel {
 		return
 	}
-
+	if !option.ShowCaller {
+		code = ""
+	}
 	var outstr string
 
 	switch runtime.GOOS {
