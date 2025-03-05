@@ -6,3 +6,11 @@
 2025/02/28 13:49:38.356913 [FATAL]  <main.go:72 main()> This is fatal message
 2025/02/28 13:49:38.356936 [ERROR]  <main.go:73 main()> this is a error object
 2025/02/28 13:49:38.356955 [INFO]  <main.go:74 main()> this is a trunca...
+2025/03/05 10:17:55.273929 [TRACE]  <main.go:67 main()> This is trace message
+2025/03/05 10:17:55.274088 [DEBUG]  <main.go:68 main()> This is debug message
+2025/03/05 10:17:55.274106 [INFO]  <main.go:69 main()> This is info message
+2025/03/05 10:17:55.274122 [WARN]  <main.go:70 main()> This is warn message
+2025/03/05 10:17:55.274149 [ERROR]  <main.go:71 main()> This is error message
+2025/03/05 10:17:55.274186 [FATAL]  <main.go:72 main()> This is fatal message
+2025/03/05 10:17:55.274211 [ERROR]  <main.go:73 main()> this is a error object
+2025/03/05 10:17:55.274231 [INFO]  <main.go:74 main()> this is a trunca...

@@ -76,11 +76,20 @@ func EnableStats(enable bool) {
 	enableStats = enable
 }
 
-func Open(strPath string, opts ...Option) error {
-	if strPath == "" {
-		return Error("log file is nil")
-	}
-	err := loginf.openWithOptions(strPath, opts...)
+func ShowProcess() {
+	option.ShowProcess = true
+}
+
+func ShowRoutine() {
+	option.ShowRoutine = true
+}
+
+func ShowCaller() {
+	option.ShowCaller = true
+}
+
+func Open(filePath string, opts ...Option) error {
+	err := loginf.openWithOptions(filePath, opts...)
 	if err != nil {
 		return Error("%s", err)
 	}
@@ -159,11 +168,14 @@ func (m *logInfo) Println(args ...interface{}) {
 	loginf.logger.Println(args...)
 }
 
-func (m *logInfo) openWithOptions(strPath string, opts ...Option) (err error) {
+func (m *logInfo) openWithOptions(filePath string, opts ...Option) (err error) {
+	if filePath == "" {
+		return Error("log file path is required")
+	}
 	if len(opts) > 0 {
 		option = opts[0]
 	}
-	option.filePath = strPath
+	option.filePath = filePath
 	if option.FileSize == 0 {
 		option.FileSize = DefaultLogSize
 	}
