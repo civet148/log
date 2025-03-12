@@ -66,6 +66,7 @@ var (
 		LogLevel:   LEVEL_INFO,
 		FileSize:   DefaultLogSize,
 		MaxBackups: DefaultMaxBackups,
+		ShowCaller: true,
 	} //日志参数选项
 )
 
@@ -84,8 +85,8 @@ func ShowRoutine() {
 	option.ShowRoutine = true
 }
 
-func ShowCaller() {
-	option.ShowCaller = true
+func DisableCaller() {
+	option.ShowCaller = false
 }
 
 func Open(filePath string, opts ...Option) error {
