@@ -1,2 +1,2 @@
-/test/test.log
-/test/logs/
+*.log
+example/*.log

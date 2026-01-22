@@ -3,798 +3,511 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/mattn/go-colorable"
-	"log"
 	"os"
-	"path"
-	"path/filepath"
-	"reflect"
-	"runtime"
-	"sort"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
-var colorStdout = colorable.NewColorableStdout()
+var LevelNames = []string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "PANIC", "JSON"}
 
-var LevelName = []string{"[TRACE]", "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[FATAL]", "[PANIC]", "[JSON]"}
-
-const (
-	DefaultLogSize    = 1024 //MB
-	DefaultMaxBackups = 31
-)
-
-const (
-	ENV_LOG_LEVEL = "LOG_LEVEL"
-)
-
-const (
-	LEVEL_TRACE = 0
-	LEVEL_DEBUG = 1
-	LEVEL_INFO  = 2
-	LEVEL_WARN  = 3
-	LEVEL_ERROR = 4
-	LEVEL_FATAL = 5
-	LEVEL_PANIC = 6
-	LEVEL_JSON  = 7
-)
-
-type logInfo struct {
-	locker  sync.RWMutex
-	logFile *os.File    //日志文件对象
-	logger  *log.Logger //日志输出对象
+// Logger 日志接口
+type Logger interface {
+	Json(args ...any)
+	Trace(args ...any)
+	Debug(args ...any)
+	Info(args ...any)
+	Warn(args ...any)
+	Error(args ...any) error
+	Fatal(args ...any)
+	Panic(args ...any)
+	Tracef(format string, args ...any)
+	Debugf(format string, args ...any)
+	Infof(format string, args ...any)
+	Warnf(format string, args ...any)
+	Errorf(format string, args ...any) error
+	Fatalf(format string, args ...any)
+	Panicf(format string, args ...any)
 }
 
-type Option struct {
-	LogLevel     int    //文件日志输出级别
-	FileSize     int    //文件日志分割大小(MB)
-	MaxBackups   int    //文件最大分割数
-	CloseConsole bool   //开启/关闭终端屏幕输出
-	ShowProcess  bool   //显示进程ID
-	ShowRoutine  bool   //显示协程ID
-	ShowCaller   bool   //显示调用者信息
-	filePath     string //文件日志路径
+// LoggerImpl Logger接口的实现
+type LoggerImpl struct {
+	outputManager *OutputManager
+	options       *logOptions
+	isClosed      int32
+	mu            sync.RWMutex
 }
 
-// 全局变量
-var (
-	loginf logInfo //日志信息对象
-	option = Option{
-		LogLevel:   LEVEL_INFO,
-		FileSize:   DefaultLogSize,
-		MaxBackups: DefaultMaxBackups,
-		ShowCaller: true,
-	} //日志参数选项
-)
+// 全局默认logger实例
+var defaultLogger *LoggerImpl
+var once sync.Once
 
-func init() {
-}
-
-func EnableStats(enable bool) {
-	enableStats = enable
-}
-
-func ShowProcess() {
-	option.ShowProcess = true
-}
-
-func ShowRoutine() {
-	option.ShowRoutine = true
-}
-
-func DisableCaller() {
-	option.ShowCaller = false
-}
-
-func Open(filePath string, opts ...Option) error {
-	err := loginf.openWithOptions(filePath, opts...)
-	if err != nil {
-		return Error("%s", err)
-	}
-	go backupLogFile()
-	return nil
-}
-
-// 关闭日志
-func Close() {
-	err := loginf.closeFile()
-	if err != nil {
-		Error("%s", err)
-		return
-	}
-}
-
-// 设置日志文件分割大小（MB)
-func SetFileSize(size int) {
-	option.FileSize = size
-}
-
-// 设置日志级别(字符串型: trace/debug/info/warn/error/fatal 数值型: 0=TRACE 1 =DEBUG 2=INFO 3=WARN 4=ERROR 5=FATAL)
-func SetLevel(level interface{}) {
-
-	var nLevel int
-	switch level.(type) {
-	case string:
-		strLevel := strings.ToLower(level.(string))
-		switch strLevel {
-		case "trace":
-			nLevel = LEVEL_TRACE
-		case "debug":
-			nLevel = LEVEL_DEBUG
-		case "info":
-			nLevel = LEVEL_INFO
-		case "warn", "warning":
-			nLevel = LEVEL_WARN
-		case "error":
-			nLevel = LEVEL_ERROR
-		case "fatal":
-			nLevel = LEVEL_FATAL
+// getDefaultLogger 获取默认logger实例（单例模式）
+func getDefaultLogger() *LoggerImpl {
+	once.Do(func() {
+		var err error
+		defaultLogger, err = NewLogger(WithSkipCallerNum(5))
+		if err != nil {
+			// 如果创建失败，创建一个最基本的logger
+			defaultLogger = &LoggerImpl{
+				options: options,
+			}
+			// 尝试创建一个基本的输出管理器
+			if manager, err := NewOutputManager(options); err == nil {
+				defaultLogger.outputManager = manager
+			}
 		}
-	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
-		nLevel, _ = strconv.Atoi(fmt.Sprintf("%v", level))
-	default:
-		nLevel = LEVEL_INFO
-	}
-	option.LogLevel = nLevel
-}
-
-// 设置关闭/开启屏幕输出
-func CloseConsole(ok bool) {
-	option.CloseConsole = ok
-}
-
-// 设置最大备份数量
-func SetMaxBackup(nMaxBackups int) {
-	option.MaxBackups = nMaxBackups
-}
-
-// 定期清理日志，仅保留MaxBackups个数的日志
-func backupLogFile() {
-	for {
-		_ = loginf.renameFile()
-		_ = loginf.cleanBackupLog()
-		time.Sleep(30 * time.Second)
-	}
-}
-
-func (m *logInfo) Println(args ...interface{}) {
-	if loginf.logger == nil {
-		return
-	}
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	loginf.logger.Println(args...)
-}
-
-func (m *logInfo) openWithOptions(filePath string, opts ...Option) (err error) {
-	if filePath == "" {
-		return Error("log file path is required")
-	}
-	if len(opts) > 0 {
-		option = opts[0]
-	}
-	option.filePath = filePath
-	if option.FileSize == 0 {
-		option.FileSize = DefaultLogSize
-	}
-	if option.MaxBackups == 0 {
-		option.MaxBackups = DefaultMaxBackups
-	}
-	return m.createFile() //创建文件
-}
-
-// 关闭日志文件
-func (m *logInfo) closeFile() error {
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	if loginf.logFile == nil {
-		return nil
-	}
-	_ = loginf.logFile.Close()
-	loginf.logFile = nil
-	return nil
-}
-
-// 清理已过期备份
-func (m *logInfo) cleanBackupLog() error {
-	var files []os.FileInfo
-	strPath := option.filePath
-	if strPath == "" {
-		return nil
-	}
-	dir, filename := filepath.Split(strPath)
-	if dir == "" {
-		dir = "."
-	}
-	match := filename + "."
-	filepath.Walk(dir,
-		func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				return nil
-			}
-			if strings.Index(info.Name(), match) != -1 {
-				files = append(files, info)
-			}
-			return nil
-		})
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].ModTime().Unix() > files[j].ModTime().Unix()
 	})
-	count := len(files)
-	if count > option.MaxBackups && option.MaxBackups != 0 {
-		for i := option.MaxBackups - 1; i < count; i++ {
-			strFilePath := filepath.Join(dir, files[i].Name())
-			_ = os.Remove(strFilePath)
-		}
-	}
-	return nil
+	return defaultLogger
 }
 
-// 关闭日志文件
-func (m *logInfo) renameFile() (err error) {
-	if loginf.logFile == nil {
-		return nil
+// NewLogger 创建新的Logger实例
+func NewLogger(opts ...Option) (*LoggerImpl, error) {
+	// 复制全局配置
+	loggerOptions := &logOptions{
+		level:          options.level,
+		logFilePath:    options.logFilePath,
+		logFileSize:    options.logFileSize,
+		maxBackups:     options.maxBackups,
+		disableConsole: options.disableConsole,
+		showProcess:    options.showProcess,
+		showRoutine:    options.showRoutine,
+		showCaller:     options.showCaller,
+		showColor:      options.showColor,
+		skipCallerNum:  options.skipCallerNum,
+		jsonFormatter:  options.jsonFormatter,
 	}
-	fi, err := os.Stat(option.filePath)
+
+	// 应用选项
+	for _, opt := range opts {
+		opt(loggerOptions)
+	}
+
+	// 创建输出管理器
+	outputManager, err := NewOutputManager(loggerOptions)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create output manager: %w", err)
 	}
-	fs := fi.Size()
-	renameSize := option.FileSize * 1024 * 1024
 
-	m.locker.Lock()
-	defer m.locker.Unlock()
-
-	if fs > int64(renameSize) {
-		_ = loginf.logFile.Close()
-		datetime := time.Now().Format("20060102150405")
-		var strPath string
-		strPath = fmt.Sprintf("%v.%v", option.filePath, datetime) //日志文件有后缀(日志备份文件名格式不能随意改动)
-		err = os.Rename(option.filePath, strPath)                 //将文件备份
-		if err != nil {
-			return err
-		}
-		loginf.logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-		if err != nil {
-			return err
-		}
-		loginf.logger = log.New(loginf.logFile, "", log.Lmicroseconds|log.LstdFlags)
-	}
-	return nil
+	return &LoggerImpl{
+		outputManager: outputManager,
+		options:       loggerOptions,
+	}, nil
 }
 
-// getDirFromPath从给定的完整文件路径中提取出目录部分
-func getDirFromPath(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' || path[i] == '\\' {
-			return path[:i]
-		}
-	}
-	return ""
+// 包级别的便捷函数，使用默认logger
+
+// Json 输出JSON格式日志
+func Json(args ...any) {
+	getDefaultLogger().Json(args...)
 }
 
-// createDirIfNotExist检查目录是否存在，如果不存在则创建
-func createDirIfNotExist(dir string) error {
-	var ignoreDirs = []string{
-		"",
-		".",
-		"..",
-		"./",
-		"../",
-	}
-	dir = strings.TrimSpace(dir)
-	for _, d := range ignoreDirs {
-		if d == dir {
-			return nil
-		}
-	}
-	_, err := os.Stat(dir)
-	if os.IsNotExist(err) {
-		// 如果目录不存在，则创建目录，权限设置为0755（可根据需求调整）
-		return os.MkdirAll(dir, os.ModePerm)
-	}
-	return err
+// Trace 输出TRACE级别日志
+func Trace(args ...any) {
+	getDefaultLogger().Trace(args...)
 }
 
-// 创建日志文件
-func (m *logInfo) createFile() error {
-	var err error
-	//检查目录路径是否存在，不存在自动创建目录和子目录
-	dir := getDirFromPath(option.filePath)
-	err = createDirIfNotExist(dir)
-	if err != nil {
-		return err
-	}
-	m.locker.Lock()
-	defer m.locker.Unlock()
-	loginf.logFile, err = os.OpenFile(option.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		return Error("Open log file ", option.filePath, " failed ", err)
-	}
-	loginf.logger = log.New(loginf.logFile, "", log.Lmicroseconds|log.LstdFlags)
-	return nil
+// Debug 输出DEBUG级别日志
+func Debug(args ...any) {
+	getDefaultLogger().Debug(args...)
 }
 
-// 截取函数名称
-func getFuncName(pc uintptr) (name string) {
-
-	n := runtime.FuncForPC(pc).Name()
-	ns := strings.Split(n, ".")
-	name = ns[len(ns)-1]
-	return
+// Info 输出INFO级别日志
+func Info(args ...any) {
+	getDefaultLogger().Info(args...)
 }
 
-// 通过级别名称获取索引
-func getLevel(name string) (idx int) {
-
-	name = "[" + name + "]"
-	switch name {
-	case LevelName[LEVEL_TRACE]:
-		idx = LEVEL_TRACE
-	case LevelName[LEVEL_DEBUG]:
-		idx = LEVEL_DEBUG
-	case LevelName[LEVEL_INFO]:
-		idx = LEVEL_INFO
-	case LevelName[LEVEL_WARN]:
-		idx = LEVEL_WARN
-	case LevelName[LEVEL_ERROR]:
-		idx = LEVEL_ERROR
-	case LevelName[LEVEL_FATAL]:
-		idx = LEVEL_FATAL
-	case LevelName[LEVEL_PANIC]:
-		idx = LEVEL_PANIC
-	default:
-		idx = LEVEL_INFO
-	}
-	return
+// Warn 输出WARN级别日志
+func Warn(args ...any) {
+	getDefaultLogger().Warn(args...)
 }
 
-func getCaller(skip int) (strFile, strFunc string, nLineNo int) {
-	pc, file, line, ok := runtime.Caller(skip)
-	if ok {
-		strFile = path.Base(file)
-		nLineNo = line
-		strFunc = getFuncName(pc)
-	}
-	return
+// Error 输出ERROR级别日志
+func Error(args ...any) error {
+	return getDefaultLogger().Error(args...)
 }
 
-func getStack(skip, n int) string {
-	var strStack string
-	strStack += "\t###CALLSTACK### { "
-	for i := 0; i < n; i++ {
-		pc, file, line, ok := runtime.Caller(skip + i)
-		if ok {
-			strFile := path.Base(file)
-			nLineNo := line
-			strFunc := getFuncName(pc)
-			strStack += fmt.Sprintf("%s:%d %s(); ", strFile, nLineNo, strFunc)
-		}
-	}
-	strStack += "}"
-	strStack = color.CyanString(strStack)
-	return strStack
+// Fatal 输出FATAL级别日志
+func Fatal(args ...any) {
+	getDefaultLogger().Fatal(args...)
 }
 
-// 内部格式化输出函数
-func output(level int, formatter interface{}, args ...interface{}) (strFile, strFunc string, nLineNo int) {
-	var inf, code string
-	var colorTimeName string
+// Panic 输出PANIC级别日志
+func Panic(args ...any) {
+	getDefaultLogger().Panic(args...)
+}
 
-	strTimeFmt := fmt.Sprintf("%v", time.Now().Format("2006-01-02 15:04:05.000000"))
-	strRoutine := fmt.Sprintf("{%v}", getRoutineId())
-	strPID := fmt.Sprintf("PID:%d", os.Getpid())
-	Name := LevelName[level]
-	if !option.ShowProcess {
-		strPID = ""
-	}
-	if !option.ShowRoutine {
-		strRoutine = ""
-	}
+// Tracef 输出格式化TRACE级别日志
+func Tracef(format string, args ...any) {
+	getDefaultLogger().Tracef(format, args...)
+}
 
-	switch level {
-	case LEVEL_TRACE:
-		colorTimeName = fmt.Sprintf("\033[38m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_DEBUG:
-		colorTimeName = fmt.Sprintf("\033[34m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_INFO:
-		colorTimeName = fmt.Sprintf("\033[32m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_WARN:
-		colorTimeName = fmt.Sprintf("\033[33m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_ERROR:
-		colorTimeName = fmt.Sprintf("\033[31m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_FATAL:
-		colorTimeName = fmt.Sprintf("\033[35m%v %s %s", strTimeFmt, strPID, Name)
-	case LEVEL_PANIC:
-		colorTimeName = fmt.Sprintf("\033[35m%v %s %s", strTimeFmt, strPID, Name)
-	default:
-		colorTimeName = fmt.Sprintf("\033[34m%v %s %s", strTimeFmt, strPID, Name)
-	}
-	var fmtstr string
-	switch formatter.(type) {
-	case string:
-		fmtstr = formatter.(string)
-		if formatter != "" {
-			inf = fmt.Sprintf(fmtstr, args...)
-		} else {
-			inf = fmt.Sprint(args...)
-		}
-	case error:
-		err := formatter.(error)
-		fmtstr = fmt.Sprintf("%v", err.Error())
-	}
+// Debugf 输出格式化DEBUG级别日志
+func Debugf(format string, args ...any) {
+	getDefaultLogger().Debugf(format, args...)
+}
 
-	strFile, strFunc, nLineNo = getCaller(3)
-	code = "<" + strFile + ":" + strconv.Itoa(nLineNo) + " " + strFunc + "()" + ">"
-	if level < option.LogLevel {
+// Infof 输出格式化INFO级别日志
+func Infof(format string, args ...any) {
+	getDefaultLogger().Infof(format, args...)
+}
+
+// Warnf 输出格式化WARN级别日志
+func Warnf(format string, args ...any) {
+	getDefaultLogger().Warnf(format, args...)
+}
+
+// Errorf 输出格式化ERROR级别日志
+func Errorf(format string, args ...any) error {
+	return getDefaultLogger().Errorf(format, args...)
+}
+
+// Fatalf 输出格式化FATAL级别日志
+func Fatalf(format string, args ...any) {
+	getDefaultLogger().Fatalf(format, args...)
+}
+
+// Panicf 输出格式化PANIC级别日志
+func Panicf(format string, args ...any) {
+	getDefaultLogger().Panicf(format, args...)
+}
+
+// LoggerImpl的方法实现
+
+// Json 输出JSON格式日志
+func (l *LoggerImpl) Json(args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelInfo) {
 		return
 	}
-	if !option.ShowCaller {
-		code = ""
-	}
-	var outstr string
-
-	switch runtime.GOOS {
-	//case "windows": //Windows终端（无颜色）
-	//outstr = strTimeFmt + " " + Name + " " + strRoutine + " " + code + " " + inf
-	default: //Unix类终端支持颜色显示
-		outstr = "\033[1m" + colorTimeName + " " + strRoutine + " " + code + "\033[0m " + inf
-	}
-
-	if level >= LEVEL_ERROR && level != LEVEL_JSON {
-		outstr += getStack(3, 10)
-	}
-	//打印到终端屏幕
-	if !option.CloseConsole {
-		_, _ = fmt.Fprintln(colorStdout /*os.Stdout*/, outstr)
-	}
-
-	//输出到文件（如果Open函数传入了正确的文件路径）
-	loginf.Println(Name + " " + strRoutine + " " + code + " " + inf)
-
-	return
+	var message = l.marshalJson(args...)
+	l.logWithLevel(LevelInfo, message)
 }
 
-func fmtString(args ...interface{}) (strOut string) {
-	if len(args) > 0 {
-		switch args[0].(type) {
-		case string:
-			if strings.Contains(args[0].(string), "%") {
-				strOut = fmt.Sprintf(args[0].(string), args[1:]...)
-			} else {
-				strOut = fmt.Sprint(args...)
-			}
-		case error:
-			err := args[0].(error)
-			strOut = fmt.Sprintf("%s", err.Error())
-		default:
-			strOut = fmt.Sprint(args...)
-		}
-	}
-	return
-}
-
-func fmtStringW(args ...interface{}) (strOut string) {
-	var strArgs []string
-	for _, v := range args {
-		strArgs = append(strArgs, fmt.Sprintf("%v", v))
-	}
-	return strings.Join(strArgs, " ")
-}
-
-func Printf(args ...interface{}) {
-	strPrint := fmtString(args...)
-	fmt.Println(strPrint)
-}
-
-// 输出调试级别信息
-func Trace(args ...interface{}) {
-	output(LEVEL_TRACE, fmtString(args...))
-}
-
-// 输出调试级别信息
-func Debug(args ...interface{}) {
-	output(LEVEL_DEBUG, fmtString(args...))
-}
-
-// 输出运行级别信息
-func Info(args ...interface{}) {
-	output(LEVEL_INFO, fmtString(args...))
-}
-
-// 输出警告级别信息
-func Warn(args ...interface{}) {
-	output(LEVEL_WARN, fmtString(args...))
-}
-
-// 输出警告级别信息
-func Warning(args ...interface{}) {
-	output(LEVEL_WARN, fmtString(args...))
-}
-
-// 输出错误级别信息
-func Error(args ...interface{}) error {
-	err := fmt.Errorf(fmtString(args...))
-	stic.error(output(LEVEL_ERROR, err.Error()))
-	return err
-}
-
-// 输出危险级别信息
-func Fatal(args ...interface{}) error {
-	err := fmt.Errorf(fmtString(args...))
-	stic.error(output(LEVEL_FATAL, err.Error()))
-	return err
-}
-
-// panic
-func Panic(args ...interface{}) {
-	panic(fmt.Sprintf(fmtString(args...)))
-}
-
-// 输出调试级别信息
-func Tracef(formatter interface{}, args ...interface{}) {
-	output(LEVEL_TRACE, formatter, args...)
-}
-
-// 输出调试级别信息
-func Debugf(formatter interface{}, args ...interface{}) {
-	output(LEVEL_DEBUG, formatter, args...)
-}
-
-// 输出运行级别信息
-func Infof(formatter interface{}, args ...interface{}) {
-	output(LEVEL_INFO, formatter, args...)
-}
-
-// 输出警告级别信息
-func Warnf(formatter interface{}, args ...interface{}) {
-	output(LEVEL_WARN, formatter, args...)
-}
-
-// 输出警告级别信息
-func Warningf(formatter interface{}, args ...interface{}) {
-	output(LEVEL_WARN, formatter, args...)
-}
-
-// 输出错误级别信息
-func Errorf(formatter interface{}, args ...interface{}) error {
-	var err error
-	err = formatterToError(formatter, args...)
-	if err == nil {
-		return nil
-	}
-	stic.error(output(LEVEL_ERROR, err.Error()))
-	return err
-}
-
-// 输出危险级别信息
-func Fatalf(formatter interface{}, args ...interface{}) error {
-	var err error
-	err = formatterToError(formatter, args...)
-	if err == nil {
-		return nil
-	}
-	stic.error(output(LEVEL_FATAL, err.Error()))
-	return err
-}
-
-func formatterToError(formatter interface{}, args ...interface{}) (err error) {
-	var fmtstr string
-	switch formatter.(type) {
-	case string:
-		fmtstr = formatter.(string)
-		if fmtstr != "" {
-			fmtstr = fmt.Sprintf(fmtstr, args...)
+func (l *LoggerImpl) marshalJson(args ...any) (message string) {
+	if len(args) == 1 {
+		// 单个参数
+		if jsonData, err := json.Marshal(args[0]); err == nil {
+			message = string(jsonData)
 		} else {
-			fmtstr = fmt.Sprint(args...)
+			message = fmt.Sprintf("%+v", args[0])
 		}
-		err = fmt.Errorf(fmtstr)
-	case error:
-		err = formatter.(error)
-		fmtstr = fmt.Sprintf("%v", err.Error())
-	}
-	return err
-}
-
-// 输出Trace级别信息
-func Tracew(args ...interface{}) {
-	output(LEVEL_DEBUG, fmtStringW(args...))
-}
-
-// 输出调试级别信息
-func Debugw(args ...interface{}) {
-	output(LEVEL_DEBUG, fmtStringW(args...))
-}
-
-// 输出运行级别信息
-func Infow(args ...interface{}) {
-	output(LEVEL_INFO, fmtStringW(args...))
-}
-
-// 输出警告级别信息
-func Warnw(args ...interface{}) {
-	output(LEVEL_WARN, fmtStringW(args...))
-}
-
-// 输出警告级别信息
-func Warningw(args ...interface{}) {
-	output(LEVEL_WARN, fmtStringW(args...))
-}
-
-// 输出错误级别信息
-func Errorw(args ...interface{}) {
-	stic.error(output(LEVEL_ERROR, fmtStringW(args...)))
-}
-
-// 输出危险级别信息
-func Fatalw(args ...interface{}) {
-	stic.error(output(LEVEL_FATAL, fmtStringW(args...)))
-}
-
-// panic
-func Panicw(args ...interface{}) {
-	panic(fmt.Sprintf(fmtStringW(args...)))
-}
-
-// 输出到空设备
-func Null(fmtstr string, args ...interface{}) {
-}
-
-func Truncate(level, size int, fmtstr string, args ...interface{}) {
-	strOutput := fmt.Sprintf(fmtstr, args...)
-	if len(strOutput) > size {
-		strOutput = strOutput[:size] + "..."
-	}
-	output(level, strOutput)
-}
-
-// 进入方法（统计）
-func Enter(args ...interface{}) {
-	output(LEVEL_INFO, "enter ", args...)
-	stic.enter(getCaller(2))
-}
-
-// 离开方法（统计）
-// 返回执行时间：h 时 m 分 s 秒 ms 毫秒 （必须先调用Enter方法才能正确统计执行时间）
-func Leave() (h, m, s int, ms float32) {
-
-	if nSpendTime, ok := stic.leave(getCaller(2)); ok {
-		h, m, s, ms = getSpendTime(nSpendTime)
-		output(LEVEL_INFO, "leave (%vh %vm %vs %.3fms)", h, m, s, ms)
-	}
-	return
-}
-
-// 打印结构体JSON
-func Json(args ...interface{}) {
-
-	var strOutput string
-
-	for _, v := range args {
-
-		data, _ := json.MarshalIndent(v, "", "\t")
-		strOutput += "\n...................................................\n" + string(data)
-	}
-
-	output(LEVEL_JSON, strOutput+"\n...................................................\n")
-}
-
-func JsonDebugString(v interface{}) string {
-	data, _ := json.MarshalIndent(v, "", "\t")
-	return string(data)
-}
-
-// args: a string of function name or nil for all
-func Report(args ...interface{}) string {
-	return stic.report(args...)
-}
-
-// 打印结构体
-func Struct(args ...interface{}) {
-
-	var strLog string
-	for i := range args {
-		arg := args[i]
-		typ := reflect.TypeOf(arg)
-		val := reflect.ValueOf(arg)
-		if typ.Kind() == reflect.Ptr { //如果是指针类型则先转为对象
-
-			typ = typ.Elem()
-			val = val.Elem()
-		}
-
-		var nDeep int
-		switch typ.Kind() {
-
-		case reflect.Struct:
-			strLog = fmtStruct(nDeep, typ, val) //遍历结构体成员标签和值存到map[string]string中
-		case reflect.String:
-			strLog += fmt.Sprintf("%v (string) = \"%+v\" \n", typ.Name(), val.Interface())
-		default:
-			strLog += fmt.Sprintf("%v (%v) = <%+v> \n", typ.Name(), typ.Kind(), val.Interface())
-		}
-
-		output(LEVEL_DEBUG, strLog)
-	}
-}
-
-// 将字段值存到其他类型的变量中
-func fmtStruct(deep int, typ reflect.Type, val reflect.Value, args ...interface{}) (strLog string) {
-
-	kind := typ.Kind()
-	nCurDeep := deep
-
-	var bPointer bool
-	var strParentName string
-	if len(args) > 0 {
-		bPointer = args[0].(bool)
-		strParentName = args[1].(string)
-	}
-
-	if !val.IsValid() {
-		if bPointer { //this variant is a struct pointer
-			strLog = fmt.Sprintf("%v%v (*%v) = <nil>\n", fmtDeep(deep), strParentName, typ.String())
-		} else {
-			strLog = fmt.Sprintf("%v%v (%v) = <nil>\n", fmtDeep(deep), strParentName, typ.String())
-		}
-		return
-	}
-
-	if bPointer { //this variant is a struct pointer
-		//strLog = fmt.Sprintf("%v%v (*%v) {\n", fmtDeep(deep) , typ.Kind().String(), typ.String())
-		strLog = fmt.Sprintf("%v%v (*%v) {\n", fmtDeep(deep), strParentName, typ.String())
 	} else {
-		strLog = fmt.Sprintf("%v%v (%v) {\n", fmtDeep(deep), strParentName, typ.String())
+		// 多个参数序列化为JSON数组
+		if jsonData, err := json.Marshal(args); err == nil {
+			message = string(jsonData)
+		} else {
+			message = fmt.Sprintf("%+v", args)
+		}
+	}
+	return message
+}
+
+// Trace 输出TRACE级别日志
+func (l *LoggerImpl) Trace(args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelTrace) {
+		return
 	}
 
-	if kind == reflect.Struct {
-		deep++
-		NumField := val.NumField()
-		for i := 0; i < NumField; i++ {
+	message := fmt.Sprint(args...)
+	l.logWithLevel(LevelTrace, message)
+}
 
-			var isPointer bool
-			typField := typ.Field(i)
-			valField := val.Field(i)
-			if typField.Type.Kind() == reflect.Ptr { //如果是指针类型则先转为对象
+// Debug 输出DEBUG级别日志
+func (l *LoggerImpl) Debug(args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelDebug) {
+		return
+	}
 
-				typField.Type = typField.Type.Elem()
-				valField = valField.Elem()
-				isPointer = true
-			}
+	message := fmt.Sprint(args...)
+	l.logWithLevel(LevelDebug, message)
+}
 
-			if typField.Type.Kind() == reflect.Struct {
+// Info 输出INFO级别日志
+func (l *LoggerImpl) Info(args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelInfo) {
+		return
+	}
 
-				strLog += fmtStruct(deep, typField.Type, valField, isPointer, typField.Name) //结构体需要递归调用
-			} else {
-				//var strLog string
-				if !valField.IsValid() { //字段为空指针
-					strLog += fmtDeep(deep) + fmt.Sprintf("%v (%v) = <nil> \n", typField.Name, typField.Type)
-				} else if !valField.CanInterface() { //非导出字段
-					strLog += fmtDeep(deep) + fmt.Sprintf("%v (%v) = <%+v> \n", typField.Name, typField.Type, valField)
+	message := fmt.Sprint(args...)
+	l.logWithLevel(LevelInfo, message)
+}
+
+// Warn 输出WARN级别日志
+func (l *LoggerImpl) Warn(args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelWarn) {
+		return
+	}
+
+	message := fmt.Sprint(args...)
+	l.logWithLevel(LevelWarn, message)
+}
+
+// Error 输出ERROR级别日志并返回错误
+func (l *LoggerImpl) Error(args ...any) error {
+	var message string
+	if l.isClosed == 0 && l.isLevelEnabled(LevelError) {
+		message = l.logWithLevel(LevelError, "", args...)
+	}
+	return fmt.Errorf(message)
+}
+
+// Fatal 输出FATAL级别日志并返回错误
+func (l *LoggerImpl) Fatal(args ...any) {
+	message := fmt.Sprint(args...)
+	if l.isClosed == 0 && l.isLevelEnabled(LevelFatal) {
+		l.logWithLevel(LevelFatal, message)
+	}
+}
+
+// Panic 输出PANIC级别日志并触发panic
+func (l *LoggerImpl) Panic(args ...any) {
+	message := fmt.Sprint(args...)
+
+	if l.isClosed == 0 && l.isLevelEnabled(LevelPanic) {
+		l.logWithLevel(LevelPanic, message)
+	}
+
+	panic(message)
+}
+
+// Tracef 输出格式化TRACE级别日志
+func (l *LoggerImpl) Tracef(format string, args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelTrace) {
+		return
+	}
+
+	l.logWithLevel(LevelTrace, format, args...)
+}
+
+// Debugf 输出格式化DEBUG级别日志
+func (l *LoggerImpl) Debugf(format string, args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelDebug) {
+		return
+	}
+
+	l.logWithLevel(LevelDebug, format, args...)
+}
+
+// Infof 输出格式化INFO级别日志
+func (l *LoggerImpl) Infof(format string, args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelInfo) {
+		return
+	}
+	l.logWithLevel(LevelInfo, format, args...)
+}
+
+// Warnf 输出格式化WARN级别日志并返回错误
+func (l *LoggerImpl) Warnf(format string, args ...any) {
+	if l.isClosed == 0 && l.isLevelEnabled(LevelWarn) {
+		l.logWithLevel(LevelWarn, format, args...)
+	}
+}
+
+// Errorf 输出格式化ERROR级别日志并返回错误
+func (l *LoggerImpl) Errorf(format string, args ...any) error {
+	var message string
+	if l.isClosed == 0 && l.isLevelEnabled(LevelError) {
+		message = l.logWithLevel(LevelError, format, args...)
+	}
+	return fmt.Errorf("%s", message)
+}
+
+// Fatalf 输出格式化FATAL级别日志
+func (l *LoggerImpl) Fatalf(format string, args ...any) {
+	if l.isClosed == 0 && l.isLevelEnabled(LevelFatal) {
+		l.logWithLevel(LevelFatal, format, args...)
+		os.Exit(-99)
+	}
+}
+
+// Panicf 输出格式化PANIC级别日志并触发panic
+func (l *LoggerImpl) Panicf(format string, args ...any) {
+	var message string
+	if l.isClosed == 0 && l.isLevelEnabled(LevelPanic) {
+		message = l.logWithLevel(LevelPanic, format, args...)
+	}
+	panic(message)
+}
+
+// logWithLevel 核心日志写入方法
+func (l *LoggerImpl) logWithLevel(level int, format any, args ...any) string {
+	if l.outputManager == nil {
+		return ""
+	}
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	var message string
+	switch format.(type) {
+	case string:
+		message = format.(string)
+		if format != "" {
+			message = fmt.Sprintf(message, args...)
+		} else {
+			message = fmt.Sprint(args...)
+		}
+	case error:
+		err := format.(error)
+		message = err.Error()
+	}
+	// 创建日志元数据
+	var metadata *LogMetadata
+	if l.options.jsonFormatter && len(args) > 0 {
+		// JSON级别特殊处理
+		metadata = newLogMetadata(level, "", l.options)
+		// 将参数序列化为JSON字符串存储在Msg字段中
+		if len(args) == 1 {
+			arg := args[0]
+			switch v := arg.(type) {
+			case string:
+				metadata.Message = v
+			default:
+				if jsonData, err := json.Marshal(v); err == nil {
+					metadata.Message = string(jsonData)
 				} else {
-
-					switch typField.Type.Kind() {
-					case reflect.String:
-						strLog += fmtDeep(deep) + fmt.Sprintf("%v (%v) = \"%+v\" \n", typField.Name, typField.Type, valField.Interface())
-					default:
-						strLog += fmtDeep(deep) + fmt.Sprintf("%v (%v) = <%+v> \n", typField.Name, typField.Type, valField.Interface())
-					}
+					metadata.Message = fmt.Sprintf("%+v", v)
 				}
 			}
+		} else {
+			// 多个参数序列化为JSON数组
+			if jsonData, err := json.Marshal(args); err == nil {
+				metadata.Message = string(jsonData)
+			} else {
+				metadata.Message = fmt.Sprintf("%+v", args)
+			}
+		}
+	} else {
+		metadata = newLogMetadata(level, message, l.options)
+	}
+
+	// 写入日志
+	if err := l.outputManager.Write(level, message, metadata); err != nil {
+		// 错误处理：输出到stderr，但不影响程序继续执行
+		fmt.Fprintf(os.Stderr, "Logger output message error: %v\n", err)
+	}
+	return message
+}
+
+// isLevelEnabled 检查日志级别是否启用
+func (l *LoggerImpl) isLevelEnabled(level int) bool {
+	return level >= l.options.level
+}
+
+// Close 关闭logger
+func (l *LoggerImpl) Close() error {
+	if !atomic.CompareAndSwapInt32(&l.isClosed, 0, 1) {
+		return nil // 已经关闭
+	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.outputManager != nil {
+		return l.outputManager.Close()
+	}
+	return nil
+}
+
+// SetLevel 设置日志级别
+func (l *LoggerImpl) SetLevel(level int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if level >= LevelTrace {
+		l.options.level = level
+	}
+}
+
+// GetLevel 获取当前日志级别
+func (l *LoggerImpl) GetLevel() int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return l.options.level
+}
+
+// SetOptions 更新logger配置
+func (l *LoggerImpl) SetOptions(opts ...Option) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// 应用选项
+	for _, opt := range opts {
+		opt(l.options)
+	}
+
+	// 重新创建输出管理器
+	if l.outputManager != nil {
+		l.outputManager.Close()
+	}
+
+	var err error
+	l.outputManager, err = NewOutputManager(l.options)
+	return err
+}
+
+// GetLevelName 获取级别名称
+func GetLevelName(level int) string {
+	if level >= 0 && level < len(LevelNames) {
+		return LevelNames[level]
+	}
+	return "UNKNOWN"
+}
+
+// ParseLevel 解析级别字符串
+func ParseLevel(levelStr string) int {
+	levelStr = strings.ToUpper(strings.TrimSpace(levelStr))
+	for i, name := range LevelNames {
+		if name == levelStr {
+			return i
 		}
 	}
-	strLog += fmtDeep(nCurDeep) + "}\n"
-	return
-}
-
-func fmtDeep(nDeep int) (s string) {
-
-	for i := 0; i < nDeep; i++ {
-		s += fmt.Sprintf("... ")
+	// 支持别名
+	switch levelStr {
+	case "WARNING":
+		return LevelWarn
+	default:
+		return LevelInfo // 默认级别
 	}
-	return
 }
 
+// Flush 强制刷新所有缓冲区
+func (l *LoggerImpl) Flush() error {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if l.outputManager == nil {
+		return nil
+	}
+
+	// 如果输出管理器有文件写入器，同步文件
+	if l.outputManager.fileWriter != nil && l.outputManager.fileWriter.rotator != nil {
+		return l.outputManager.fileWriter.rotator.Sync()
+	}
+
+	return nil
+}
+
+// 包级别的配置和管理函数
+
+// SetGlobalLevel 设置全局日志级别
+func SetGlobalLevel(level int) {
+	getDefaultLogger().SetLevel(level)
+}
+
+// GetGlobalLevel 获取全局日志级别
+func GetGlobalLevel() int {
+	return getDefaultLogger().GetLevel()
+}
+
+// Flush 刷新全局logger
+func Flush() error {
+	return getDefaultLogger().Flush()
+}
+
+// Close 关闭全局logger
+func Close() error {
+	if defaultLogger != nil {
+		return defaultLogger.Close()
+	}
+	return nil
+}
