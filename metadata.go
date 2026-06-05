@@ -30,7 +30,7 @@ type JSONLogEntry struct {
 	ProcessID int                    `json:"process_id,omitempty"`
 	RoutineID uint64                 `json:"routine_id,omitempty"`
 	Caller    string                 `json:"caller,omitempty"`
-	Custom    map[string]interface{} `json:"custom,omitempty"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
 }
 
 // SerializationContext 序列化上下文
@@ -73,7 +73,7 @@ func newJSONLogEntry(args []interface{}, opts *logOptions) *JSONLogEntry {
 	entry := &JSONLogEntry{
 		Timestamp: time.Now().Format(DateTimeFormat),
 		Level:     "JSON",
-		Custom:    make(map[string]interface{}),
+		Fields:    make(map[string]interface{}),
 	}
 
 	// 设置进程ID
@@ -191,8 +191,8 @@ func (entry *JSONLogEntry) MarshalJSON() ([]byte, error) {
 		temp["caller"] = entry.Caller
 	}
 
-	if len(entry.Custom) > 0 {
-		temp["custom"] = entry.Custom
+	if len(entry.Fields) > 0 {
+		temp["fields"] = entry.Fields
 	}
 
 	if entry.Message != "" {
@@ -250,8 +250,8 @@ func (entry *JSONLogEntry) UnmarshalJSON(data []byte) error {
 		entry.Caller = v
 	}
 
-	if v, ok := temp["custom"].(map[string]interface{}); ok {
-		entry.Custom = v
+	if v, ok := temp["fields"].(map[string]interface{}); ok {
+		entry.Fields = v
 	}
 
 	return nil

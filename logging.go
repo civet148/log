@@ -354,7 +354,7 @@ func (l *LoggerImpl) logWithLevel(level int, format any, args ...any) string {
 	if l.options.jsonFormatter && len(args) > 0 {
 		// JSON级别特殊处理
 		metadata = newLogMetadata(level, "", l.options)
-		// 将参数序列化为JSON字符串存储在Msg字段中
+		// 将参数序列化为JSON字符串存储在msg字段中
 		if len(args) == 1 {
 			arg := args[0]
 			switch v := arg.(type) {

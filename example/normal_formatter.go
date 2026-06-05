@@ -95,7 +95,7 @@ func main() {
 
 	customLogger.Info("这是来自自定义logger的消息")
 	customLogger.Json(map[string]interface{}{
-		"logger":    "custom",
+		"logger":    "fields",
 		"msg":       "自定义logger的JSON输出",
 		"timestamp": time.Now(),
 	})
