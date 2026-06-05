@@ -179,7 +179,7 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 	entry := map[string]interface{}{
 		"@timestamp": metadata.Timestamp.Format(f.timeFormat),
 		"level":      metadata.Level,
-		"message":    message,
+		"msg":        message,
 	}
 
 	// 添加可选字段
@@ -196,7 +196,7 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 	}
 
 	if metadata.Message != "" {
-		entry["message"] = metadata.Message
+		entry["msg"] = metadata.Message
 	}
 
 	if len(metadata.Fields) > 0 {

@@ -17,7 +17,7 @@ type LogMetadata struct {
 	ProcessID int                    `json:"process_id,omitempty"`
 	RoutineID uint64                 `json:"routine_id,omitempty"`
 	Caller    string                 `json:"caller,omitempty"`
-	Message   string                 `json:"message"`
+	Message   string                 `json:"msg"`
 	Fields    map[string]interface{} `json:"fields,omitempty"`
 }
 
@@ -25,7 +25,7 @@ type LogMetadata struct {
 type JSONLogEntry struct {
 	Timestamp string                 `json:"@timestamp"`
 	Level     string                 `json:"level"`
-	Message   string                 `json:"message"`
+	Message   string                 `json:"msg"`
 	Value     interface{}            `json:"value,omitempty"`
 	ProcessID int                    `json:"process_id,omitempty"`
 	RoutineID uint64                 `json:"routine_id,omitempty"`
@@ -196,7 +196,7 @@ func (entry *JSONLogEntry) MarshalJSON() ([]byte, error) {
 	}
 
 	if entry.Message != "" {
-		temp["message"] = entry.Message
+		temp["msg"] = entry.Message
 	}
 
 	return json.Marshal(temp)
@@ -230,7 +230,7 @@ func (entry *JSONLogEntry) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if v, ok := temp["message"].(string); ok {
+	if v, ok := temp["msg"].(string); ok {
 		entry.Message = v
 	}
 

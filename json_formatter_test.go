@@ -67,7 +67,7 @@ func TestWithJsonFormatterOption(t *testing.T) {
 	}
 
 	// 验证Json日志的内容是序列化的JSON字符串
-	if msg, ok := jsonLog["message"]; ok {
+	if msg, ok := jsonLog["msg"]; ok {
 		var serializedData map[string]interface{}
 		if err := json.Unmarshal([]byte(msg.(string)), &serializedData); err != nil {
 			t.Errorf("Json log message is not serialized JSON: %v", err)
@@ -140,7 +140,7 @@ func TestJsonMethodAsNormalMessage(t *testing.T) {
 			}
 
 			// 验证消息字段包含序列化的数据
-			if message, ok := logEntry["message"]; ok {
+			if message, ok := logEntry["msg"]; ok {
 				// 验证message字段是有效的JSON字符串
 				var serializedData interface{}
 				if err := json.Unmarshal([]byte(message.(string)), &serializedData); err != nil {

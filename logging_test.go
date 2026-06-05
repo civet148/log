@@ -183,8 +183,8 @@ func TestJSONFormatting(t *testing.T) {
 	if jsonData["level"] != "INFO" {
 		t.Errorf("Expected level INFO, got %v", jsonData["level"])
 	}
-	if jsonData["message"] != "Test message" {
-		t.Errorf("Expected message 'Test message', got %v", jsonData["message"])
+	if jsonData["msg"] != "Test message" {
+		t.Errorf("Expected message 'Test message', got %v", jsonData["msg"])
 	}
 	if jsonData["process_id"] != float64(123) {
 		t.Errorf("Expected process_id 123, got %v", jsonData["process_id"])
