@@ -5,6 +5,7 @@ import "github.com/civet148/log/v2"
 func init() {
 	log.SetLevel(log.LevelDebug)
 	log.SetJsonFormatter()
+	log.SetFileName("output-json.log") //同时输出到文件
 }
 
 func main() {
