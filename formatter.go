@@ -12,6 +12,10 @@ const (
 	DateTimeFormat = "2006-01-02 15:04:05.000"
 )
 
+const (
+	fieldTitle = "#FIELDS#"
+)
+
 // Formatter 格式化器接口
 type Formatter interface {
 	Format(level int, message string, metadata *LogMetadata) string
@@ -108,7 +112,9 @@ func (f *ColorFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 消息内容
 	parts = append(parts, message)
-
+	if len(metadata.Fields) > 0 {
+		parts = append(parts, formatFields(metadata.Fields))
+	}
 	return strings.Join(parts, " ")
 }
 
@@ -161,8 +167,15 @@ func (f *PlainFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 消息内容
 	parts = append(parts, message)
-
+	if len(metadata.Fields) > 0 {
+		parts = append(parts, formatFields(metadata.Fields))
+	}
 	return strings.Join(parts, " ")
+}
+
+func formatFields(fields map[string]any) string {
+	data, _ := json.Marshal(fields)
+	return fmt.Sprintf("%s %s", fieldTitle, data)
 }
 
 // NewJSONFormatter 创建JSON格式化器

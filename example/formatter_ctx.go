@@ -2,6 +2,11 @@ package main
 
 import "github.com/civet148/log/v2"
 
+func init() {
+	log.SetLevel(log.LevelDebug)
+	log.SetJsonFormatter()
+}
+
 func main() {
 	ctx := log.NewContext(nil)
 	log.WithPrintf(ctx, "hello")
