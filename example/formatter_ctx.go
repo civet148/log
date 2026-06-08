@@ -10,7 +10,8 @@ func init() {
 func main() {
 	ctx := log.NewContext(nil)
 	log.WithPrintf(ctx, "hello")
-	log.WithPrintFields(ctx, "key1", 1, "key2", 2, "key3")
+	log.WithFields(ctx, "key1", 1, "key2", 2, "key3")
 	log.WithPrintf(ctx, "world")
+	log.WithPrintf(ctx, "my name is %s", "lory")
 	log.PrintContext(ctx)
 }

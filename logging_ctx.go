@@ -68,7 +68,7 @@ func GetLogContext(ctx context.Context) (lc *LogContext, ok bool) {
 	return lc, ok
 }
 
-func WithPrintFields(ctx context.Context, fields ...any) {
+func WithFields(ctx context.Context, fields ...any) {
 	var ok bool
 	var lc *LogContext
 	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
