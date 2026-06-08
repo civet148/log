@@ -88,7 +88,7 @@ func WithPrintf(ctx context.Context, msg string, args ...any) {
 	lc.AppendMsg(msg, args...)
 }
 
-func PrintContext(ctx context.Context) (err error) {
+func PrintContext(ctx context.Context) {
 	var ok bool
 	var lc *LogContext
 	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
@@ -103,5 +103,4 @@ func PrintContext(ctx context.Context) (err error) {
 	var msg = strings.Join(lc.msgs, " ")
 	logger.WithFields(lc.fields...)
 	logger.Infof(msg)
-	return nil
 }

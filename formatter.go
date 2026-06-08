@@ -212,8 +212,8 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 		entry["msg"] = metadata.Message
 	}
 
-	if len(metadata.Fields) > 0 {
-		entry["fields"] = metadata.Fields
+	for k, v := range metadata.Fields {
+		entry[k] = v
 	}
 
 	// 序列化
