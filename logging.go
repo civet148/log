@@ -28,6 +28,7 @@ type Logger interface {
 	Errorf(format string, args ...any) error
 	Fatalf(format string, args ...any)
 	Panicf(format string, args ...any)
+	WithFields(fields ...any)
 }
 
 // LoggerImpl Logger接口的实现
@@ -76,6 +77,7 @@ func NewLogger(opts ...Option) (*LoggerImpl, error) {
 		showColor:      options.showColor,
 		skipCallerNum:  options.skipCallerNum,
 		jsonFormatter:  options.jsonFormatter,
+		fields:         options.fields,
 	}
 
 	// 应用选项
@@ -173,6 +175,16 @@ func Panicf(format string, args ...any) {
 }
 
 // LoggerImpl的方法实现
+
+func (l *LoggerImpl) WithFields(fields ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for i, v := range fields {
+		if i%2 == 0 && i+1 < len(fields) {
+			l.options.fields[strings.TrimSpace(fmt.Sprint(v))] = fields[i+1]
+		}
+	}
+}
 
 // Json 输出JSON格式日志
 func (l *LoggerImpl) Json(args ...any) {

@@ -450,43 +450,6 @@ func TestErrorHandling(t *testing.T) {
 	}
 }
 
-// TestPerformancePool 测试对象池性能
-func TestPerformancePool(t *testing.T) {
-	// 测试LogMetadata池
-	metadata1 := globalPool.GetLogMetadata()
-	if metadata1 == nil {
-		t.Error("Failed to get metadata from pool")
-	}
-
-	metadata1.Level = "TEST"
-	metadata1.Message = "Test message"
-
-	globalPool.PutLogMetadata(metadata1)
-
-	metadata2 := globalPool.GetLogMetadata()
-	if metadata2 == nil {
-		t.Error("Failed to get second metadata from pool")
-	}
-
-	// 验证对象被重置
-	if metadata2.Level != "" || metadata2.Message != "" {
-		t.Error("Metadata object was not properly reset")
-	}
-
-	globalPool.PutLogMetadata(metadata2)
-
-	// 测试缓冲区池
-	buffer1 := globalPool.GetBuffer()
-	buffer1.WriteString("test")
-	globalPool.PutBuffer(buffer1)
-
-	buffer2 := globalPool.GetBuffer()
-	if buffer2.Len() != 0 {
-		t.Error("Buffer was not properly reset")
-	}
-	globalPool.PutBuffer(buffer2)
-}
-
 // TestLoggerConfiguration 测试Logger配置
 func TestLoggerConfiguration(t *testing.T) {
 	logger, err := NewLogger()

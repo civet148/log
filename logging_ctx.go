@@ -2,6 +2,8 @@ package log
 
 import (
 	"context"
+	"fmt"
+	"strings"
 )
 
 const (
@@ -10,18 +12,6 @@ const (
 
 type CtxOption func(lc *LogContext)
 
-func WithTitle(title string) CtxOption {
-	return func(lc *LogContext) {
-		lc.title = title
-	}
-}
-
-func WithFields(fields ...any) CtxOption {
-	return func(lc *LogContext) {
-		lc.fields = fields
-	}
-}
-
 func WithLogger(logger Logger) CtxOption {
 	return func(lc *LogContext) {
 		lc.logger = logger
@@ -29,17 +19,9 @@ func WithLogger(logger Logger) CtxOption {
 }
 
 type LogContext struct {
-	title  string
 	logger Logger
 	fields []any
-}
-
-func (lc *LogContext) GetTitle() string {
-	return lc.title
-}
-
-func (lc *LogContext) SetTitle(title string) {
-	lc.title = title
+	msgs   []string
 }
 
 func (lc *LogContext) GetLogger() Logger {
@@ -54,14 +36,25 @@ func (lc *LogContext) GetFields() []any {
 	return lc.fields
 }
 
-func (lc *LogContext) SetFields(fields []any) {
+func (lc *LogContext) SetFields(fields ...any) {
 	lc.fields = fields
+}
+
+func (lc *LogContext) AppendFields(fields ...any) {
+	lc.fields = append(lc.fields, fields...)
+}
+
+func (lc *LogContext) AppendMsg(msg string, args ...any) {
+	lc.msgs = append(lc.msgs, fmt.Sprintf(msg, args...))
 }
 
 func NewContext(ctx context.Context, opts ...CtxOption) context.Context {
 	lc := &LogContext{}
 	for _, opt := range opts {
 		opt(lc)
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	if lc.logger == nil {
 		lc.logger = getDefaultLogger()
@@ -75,23 +68,40 @@ func GetLogContext(ctx context.Context) (lc *LogContext, ok bool) {
 	return lc, ok
 }
 
-func WithPrintf(ctx context.Context, title string, fields ...any) {
+func WithPrintFields(ctx context.Context, fields ...any) {
 	var ok bool
 	var lc *LogContext
-	var opts []CtxOption
-	opts = append(opts, WithTitle(title))
-	opts = append(opts, WithFields(fields...))
-
 	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
 		Warnf("WithPrintf: log context not found")
 		return
 	}
-	for _, opt := range opts {
-		opt(lc)
+	lc.AppendFields(fields...)
+}
+
+func WithPrintf(ctx context.Context, msg string, args ...any) {
+	var ok bool
+	var lc *LogContext
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
+		Warnf("WithPrintf: log context not found")
+		return
 	}
+	lc.AppendMsg(msg, args...)
 }
 
 func PrintContext(ctx context.Context) (err error) {
-
+	var ok bool
+	var lc *LogContext
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
+		Warnf("PrintContext: log context not found")
+		return
+	}
+	logger := lc.logger
+	if logger == nil {
+		Warnf("PrintContext: logger is nil")
+		return
+	}
+	var msg = strings.Join(lc.msgs, " ")
+	logger.WithFields(lc.fields...)
+	logger.Infof(msg)
 	return nil
 }

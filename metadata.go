@@ -47,7 +47,7 @@ func newLogMetadata(level int, message string, opts *logOptions) *LogMetadata {
 		Timestamp: time.Now(),
 		Level:     LevelNames[level],
 		Message:   message,
-		Fields:    make(map[string]interface{}),
+		Fields:    opts.fields,
 	}
 
 	// 设置进程ID
