@@ -200,7 +200,7 @@ func WithSkipCallerNum(num int) Option {
 	}
 }
 
-func WithStackTrace() Option {
+func WithShowStack() Option {
 	return func(o *logOptions) {
 		o.showStack = true
 	}

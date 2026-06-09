@@ -75,6 +75,7 @@ func NewLogger(opts ...Option) (*LoggerImpl, error) {
 		showRoutine:    options.showRoutine,
 		showCaller:     options.showCaller,
 		showColor:      options.showColor,
+		showStack:      options.showStack,
 		skipCallerNum:  options.skipCallerNum,
 		jsonFormatter:  options.jsonFormatter,
 		fields:         options.fields,

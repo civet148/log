@@ -114,16 +114,17 @@ func (f *ColorFormatter) Format(level int, message string, metadata *LogMetadata
 		parts = append(parts, fmt.Sprintf("[CALLER:%s]", metadata.Caller))
 	}
 
-	// 打印堆栈
-	if f.showStack {
-		parts = append(parts, fmt.Sprintf("[STACK:%s]", getCallStack(level)))
-	}
-
 	// 消息内容
 	parts = append(parts, message)
 	if len(metadata.Fields) > 0 {
 		parts = append(parts, formatFields(metadata.Fields))
 	}
+
+	// 打印堆栈
+	if f.showStack {
+		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(level)))
+	}
+
 	return strings.Join(parts, " ")
 }
 
@@ -175,16 +176,17 @@ func (f *PlainFormatter) Format(level int, message string, metadata *LogMetadata
 		parts = append(parts, fmt.Sprintf("[CALLER:%s]", metadata.Caller))
 	}
 
-	// 打印堆栈
-	if f.showStack {
-		parts = append(parts, fmt.Sprintf("[STACK:%s]", getCallStack(level)))
-	}
-
 	// 消息内容
 	parts = append(parts, message)
 	if len(metadata.Fields) > 0 {
 		parts = append(parts, formatFields(metadata.Fields))
 	}
+
+	// 打印堆栈
+	if f.showStack {
+		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(level)))
+	}
+
 	return strings.Join(parts, " ")
 }
 
@@ -358,7 +360,7 @@ func (fc *FormatterChain) Format(level int, message string, metadata *LogMetadat
 // getCallStack 获取调用栈信息(从当前堆栈上一层往上最多取n层函数，用分号分隔)
 func getCallStack(level int) (stacks string) {
 
-	start := 2
+	start := 6
 	depth := 5
 	var stackList []string
 
@@ -378,6 +380,9 @@ func getCallStack(level int) (stacks string) {
 		}
 
 		name := fn.Name()
+		if strings.Contains(name, "/") {
+			name = name[strings.LastIndex(name, "/")+1:]
+		}
 		stackList = append(stackList, name)
 	}
 
