@@ -68,14 +68,14 @@ func GetLogContext(ctx context.Context) (lc *LogContext, ok bool) {
 	return lc, ok
 }
 
-func WithFields(ctx context.Context, fields ...any) {
+func WithFields(ctx context.Context, kvs ...any) {
 	var ok bool
 	var lc *LogContext
 	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
 		Warnf("WithPrintf: log context not found")
 		return
 	}
-	lc.AppendFields(fields...)
+	lc.AppendFields(kvs...)
 }
 
 func WithPrintf(ctx context.Context, msg string, args ...any) {

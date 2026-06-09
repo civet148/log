@@ -74,6 +74,7 @@ func NewOutputManager(config *logOptions) (*OutputManager, error) {
 
 	// 创建终端输出器
 	if !config.disableConsole {
+		fmt.Printf("创建终端输出器配置：%+v", config)
 		manager.consoleWriter, err = NewConsoleWriter(os.Stdout, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create console writer: %w", err)
@@ -82,6 +83,7 @@ func NewOutputManager(config *logOptions) (*OutputManager, error) {
 
 	// 创建文件输出器
 	if config.logFilePath != "" {
+		fmt.Printf("创建文件输出器配置：%+v", config)
 		manager.fileWriter, err = NewFileWriter(config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file writer: %w", err)
@@ -202,9 +204,9 @@ func NewConsoleWriter(writer io.Writer, config *logOptions) (*ConsoleWriter, err
 	var formatter Formatter
 
 	if config.showColor {
-		formatter = NewColorFormatter(true, config.showProcess, config.showRoutine, config.showCaller)
+		formatter = NewColorFormatter(true, config.showProcess, config.showRoutine, config.showCaller, config.showStack)
 	} else {
-		formatter = NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller)
+		formatter = NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller, config.showStack)
 	}
 
 	return &ConsoleWriter{
@@ -236,7 +238,7 @@ func NewFileWriter(config *logOptions) (*FileWriter, error) {
 		return nil, err
 	}
 
-	formatter := NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller)
+	formatter := NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller, config.showStack)
 
 	return &FileWriter{
 		rotator:   rotator,

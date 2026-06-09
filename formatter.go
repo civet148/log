@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -29,6 +30,7 @@ type ColorFormatter struct {
 	showProcess bool
 	showRoutine bool
 	showCaller  bool
+	showStack   bool
 }
 
 // PlainFormatter 纯文本格式化器
@@ -36,6 +38,7 @@ type PlainFormatter struct {
 	showProcess bool
 	showRoutine bool
 	showCaller  bool
+	showStack   bool
 }
 
 // JSONFormatter JSON格式化器
@@ -58,7 +61,7 @@ const (
 )
 
 // NewColorFormatter 创建彩色格式化器
-func NewColorFormatter(showColor, showProcess, showRoutine, showCaller bool) *ColorFormatter {
+func NewColorFormatter(showColor, showProcess, showRoutine, showCaller, showStack bool) *ColorFormatter {
 	formatter := &ColorFormatter{
 		colorMap: map[int]string{
 			LevelTrace: ColorTrace,
@@ -74,6 +77,7 @@ func NewColorFormatter(showColor, showProcess, showRoutine, showCaller bool) *Co
 		showProcess: showProcess,
 		showRoutine: showRoutine,
 		showCaller:  showCaller,
+		showStack:   showStack,
 	}
 	return formatter
 }
@@ -107,7 +111,12 @@ func (f *ColorFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 调用者信息
 	if f.showCaller && metadata.Caller != "" {
-		parts = append(parts, fmt.Sprintf("[%s]", metadata.Caller))
+		parts = append(parts, fmt.Sprintf("[CALLER:%s]", metadata.Caller))
+	}
+
+	// 打印堆栈
+	if f.showStack {
+		parts = append(parts, fmt.Sprintf("[STACK:%s]", getCallStack(level)))
 	}
 
 	// 消息内容
@@ -130,11 +139,12 @@ func (f *ColorFormatter) getColorCode(level int) string {
 }
 
 // NewPlainFormatter 创建纯文本格式化器
-func NewPlainFormatter(showProcess, showRoutine, showCaller bool) *PlainFormatter {
+func NewPlainFormatter(showProcess, showRoutine, showCaller, showStack bool) *PlainFormatter {
 	return &PlainFormatter{
 		showProcess: showProcess,
 		showRoutine: showRoutine,
 		showCaller:  showCaller,
+		showStack:   showStack,
 	}
 }
 
@@ -162,7 +172,12 @@ func (f *PlainFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 调用者信息
 	if f.showCaller && metadata.Caller != "" {
-		parts = append(parts, fmt.Sprintf("[%s]", metadata.Caller))
+		parts = append(parts, fmt.Sprintf("[CALLER:%s]", metadata.Caller))
+	}
+
+	// 打印堆栈
+	if f.showStack {
+		parts = append(parts, fmt.Sprintf("[STACK:%s]", getCallStack(level)))
 	}
 
 	// 消息内容
@@ -211,7 +226,9 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 	if metadata.Message != "" {
 		entry["msg"] = metadata.Message
 	}
-
+	if metadata.ShowStack {
+		entry["stack"] = getCallStack(level)
+	}
 	for k, v := range metadata.Fields {
 		entry[k] = v
 	}
@@ -336,4 +353,33 @@ func (fc *FormatterChain) Format(level int, message string, metadata *LogMetadat
 		result = formatter.Format(level, result, metadata)
 	}
 	return result
+}
+
+// getCallStack 获取调用栈信息(从当前堆栈上一层往上最多取n层函数，用分号分隔)
+func getCallStack(level int) (stacks string) {
+
+	start := 2
+	depth := 5
+	var stackList []string
+
+	if level > LevelWarn {
+		depth = 10
+	}
+
+	for i := start; i < start+depth; i++ {
+		pc, _, _, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+
+		fn := runtime.FuncForPC(pc)
+		if fn == nil {
+			continue
+		}
+
+		name := fn.Name()
+		stackList = append(stackList, name)
+	}
+
+	return strings.Join(stackList, ";")
 }

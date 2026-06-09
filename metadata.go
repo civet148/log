@@ -17,6 +17,7 @@ type LogMetadata struct {
 	ProcessID int                    `json:"process_id,omitempty"`
 	RoutineID uint64                 `json:"routine_id,omitempty"`
 	Caller    string                 `json:"caller,omitempty"`
+	ShowStack bool                   `json:"show_stack,omitempty"`
 	Message   string                 `json:"msg"`
 	Fields    map[string]interface{} `json:"fields,omitempty"`
 }
@@ -64,7 +65,9 @@ func newLogMetadata(level int, message string, opts *logOptions) *LogMetadata {
 	if opts.showCaller && opts.skipCallerNum > 0 {
 		metadata.Caller = getCaller(opts.skipCallerNum)
 	}
-
+	if opts.showStack {
+		metadata.ShowStack = true
+	}
 	return metadata
 }
 

@@ -171,7 +171,7 @@ func TestWithoutJsonFormatterOption(t *testing.T) {
 	memWriter := &testMemoryWriter{buffer: &buf}
 	logger.outputManager.consoleWriter = &ConsoleWriter{
 		writer:    memWriter,
-		formatter: NewPlainFormatter(false, false, false),
+		formatter: NewPlainFormatter(false, false, false, false),
 	}
 
 	// 测试Info日志

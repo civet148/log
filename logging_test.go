@@ -320,7 +320,7 @@ func TestConcurrentLogging(t *testing.T) {
 
 // TestColorFormatter 测试颜色格式化器
 func TestColorFormatter(t *testing.T) {
-	formatter := NewColorFormatter(true, true, true, true)
+	formatter := NewColorFormatter(true, true, true, true, false)
 
 	metadata := &LogMetadata{
 		Timestamp: time.Now(),

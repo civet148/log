@@ -35,6 +35,7 @@ type logOptions struct {
 	showColor      bool           //是否显示颜色
 	jsonFormatter  bool           //是否JSON格式输出
 	skipCallerNum  int            //跳过调用者数
+	showStack      bool           //打印错误时输出调用栈
 	fields         map[string]any //日志字段
 }
 
@@ -49,6 +50,7 @@ var options = &logOptions{
 	maxBackups:     DefaultMaxBackups,
 	skipCallerNum:  4,
 	jsonFormatter:  false,
+	showStack:      false,
 	fields:         make(map[string]any),
 }
 
@@ -94,6 +96,10 @@ func DisableCaller() {
 
 func DisableConsole() {
 	options.disableConsole = true
+}
+
+func EnableStackTrace() {
+	options.showStack = true
 }
 
 /* --------------------------------------------------------------------------------------------------- */
@@ -191,5 +197,11 @@ func WithLogFile(logFile string) Option {
 func WithSkipCallerNum(num int) Option {
 	return func(o *logOptions) {
 		o.skipCallerNum = num //default 4
+	}
+}
+
+func WithStackTrace() Option {
+	return func(o *logOptions) {
+		o.showStack = true
 	}
 }
