@@ -108,6 +108,7 @@ func WithError(ctx context.Context, err error) error {
 		return err
 	}
 	lc.AppendFields("error", err.Error())
+	lc.AppendFields("stack", getCallStack(2))
 	return err
 }
 

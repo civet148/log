@@ -122,7 +122,7 @@ func (f *ColorFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 打印堆栈
 	if f.showStack {
-		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(level)))
+		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(6)))
 	}
 
 	return strings.Join(parts, " ")
@@ -184,7 +184,7 @@ func (f *PlainFormatter) Format(level int, message string, metadata *LogMetadata
 
 	// 打印堆栈
 	if f.showStack {
-		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(level)))
+		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(6)))
 	}
 
 	return strings.Join(parts, " ")
@@ -229,7 +229,7 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 		entry["msg"] = metadata.Message
 	}
 	if metadata.ShowStack {
-		entry["stack"] = getCallStack(level)
+		entry["stack"] = getCallStack(6)
 	}
 	for k, v := range metadata.Fields {
 		entry[k] = v
@@ -358,17 +358,12 @@ func (fc *FormatterChain) Format(level int, message string, metadata *LogMetadat
 }
 
 // getCallStack 获取调用栈信息(从当前堆栈上一层往上最多取n层函数，用分号分隔)
-func getCallStack(level int) (stacks string) {
+func getCallStack(skip int) (stacks string) {
 
-	start := 6
 	depth := 5
 	var stackList []string
 
-	if level > LevelWarn {
-		depth = 10
-	}
-
-	for i := start; i < start+depth; i++ {
+	for i := skip; i < skip+depth; i++ {
 		pc, _, _, ok := runtime.Caller(i)
 		if !ok {
 			break
