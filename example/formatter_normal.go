@@ -9,7 +9,7 @@ import (
 
 func init() {
 	log.SetLevel(log.LevelTrace)
-	log.EnableStackTrace()
+	log.EnableShowStack()
 }
 
 func main() {

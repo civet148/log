@@ -47,7 +47,7 @@ var once sync.Once
 func getDefaultLogger() *LoggerImpl {
 	once.Do(func() {
 		var err error
-		defaultLogger, err = NewLogger(WithSkipCallerNum(5))
+		defaultLogger, err = NewLogger(withSkipCallerNum(5))
 		if err != nil {
 			// 如果创建失败，创建一个最基本的logger
 			defaultLogger = &LoggerImpl{

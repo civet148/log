@@ -54,6 +54,12 @@ var options = &logOptions{
 	fields:         make(map[string]any),
 }
 
+func SetOptions(opts ...Option) {
+	for _, opt := range opts {
+		opt(options)
+	}
+}
+
 func SetLevel(level any) {
 	opf := WithLevel(level)
 	opf(options)
@@ -75,31 +81,38 @@ func SetJsonFormatter() {
 }
 
 func SetFileName(filePath string) {
-	options.logFilePath = filePath
+	opf := WithLogFile(filePath)
+	opf(options)
 }
 
 func DisableColor() {
-	options.showColor = false
+	opf := WithDisableColor()
+	opf(options)
 }
 
-func EnableProcess() {
-	options.showProcess = true
+func DisableProcess() {
+	opf := WithDisableProcess()
+	opf(options)
 }
 
 func DisableRouine() {
-	options.showRoutine = false
+	opf := WithDisableRoutine()
+	opf(options)
 }
 
 func DisableCaller() {
-	options.showProcess = false
+	opf := WithDisableCaller()
+	opf(options)
 }
 
 func DisableConsole() {
-	options.disableConsole = true
+	opf := WithDisableConsole()
+	opf(options)
 }
 
-func EnableStackTrace() {
-	options.showStack = true
+func EnableShowStack() {
+	opf := WithShowStack()
+	opf(options)
 }
 
 /* --------------------------------------------------------------------------------------------------- */
@@ -194,14 +207,14 @@ func WithLogFile(logFile string) Option {
 	}
 }
 
-func WithSkipCallerNum(num int) Option {
-	return func(o *logOptions) {
-		o.skipCallerNum = num //default 4
-	}
-}
-
 func WithShowStack() Option {
 	return func(o *logOptions) {
 		o.showStack = true
+	}
+}
+
+func withSkipCallerNum(num int) Option {
+	return func(o *logOptions) {
+		o.skipCallerNum = num //default 4
 	}
 }

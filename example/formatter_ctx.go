@@ -6,7 +6,7 @@ func init() {
 	log.SetLevel(log.LevelDebug)
 	log.SetJsonFormatter()
 	log.SetFileName("output-json.log") //同时输出到文件
-	log.EnableStackTrace()
+	log.EnableShowStack()
 }
 
 func main() {
