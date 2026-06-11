@@ -23,6 +23,7 @@ type LogContext struct {
 	logger       Logger
 	fields       []any
 	msgs         []string
+	caller       string
 	milliSeconds int64
 }
 
@@ -90,9 +91,13 @@ func WithPrintf(ctx context.Context, msg string, args ...any) {
 		return
 	}
 	//查询当前报错的方法名和文件名行号等信息
-	caller := getCaller(2)
-	lc.AppendFields("caller", caller)
-	lc.AppendMsg(msg, args...)
+	if lc.caller == "" {
+		lc.caller = getCaller(2)
+		lc.AppendFields("caller", lc.caller)
+	}
+	if msg != "" {
+		lc.AppendMsg(msg, args...)
+	}
 }
 
 func WithError(ctx context.Context, err error) error {
