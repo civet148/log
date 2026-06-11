@@ -22,21 +22,25 @@ type Request struct {
 
 func main() {
 	ctx := log.NewContext(nil)
-	grpcMethodCall(ctx, &Request{
+	defer log.PrintContext(ctx)
+	reply, err := grpcMethodCall(ctx, &Request{
 		Method: "GetUserList",
-		Body:   `{"id":100932}`,
+		Body:   `body data`,
 	})
-	log.PrintContext(ctx)
+	if err != nil {
+		return
+	}
+	log.WithFields(ctx, "reply", reply)
 }
 
 func grpcMethodCall(ctx context.Context, req interface{}) (res interface{}, err error) {
-	log.WithPrintf(ctx, "my name is %s", "lory")
-	time.Sleep(3 * time.Second)
-	log.WithFields(ctx, "key1", 1, "key2", 2, "key3", "3")
+	log.WithPrintf(ctx, "gprc request: %+v", req)
+	time.Sleep(1 * time.Second)
+	log.WithFields(ctx, "trace_id", 100000000000086, "key2", 2, "key3", "3")
 	if err = occurError(ctx); err != nil {
 		return nil, log.WithError(ctx, err)
 	}
-	return struct{}{}, nil
+	return "success", nil
 }
 
 func occurError(ctx context.Context) (err error) {
