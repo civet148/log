@@ -202,9 +202,9 @@ func NewConsoleWriter(writer io.Writer, config *logOptions) (*ConsoleWriter, err
 	var formatter Formatter
 
 	if config.showColor {
-		formatter = NewColorFormatter(true, config.showProcess, config.showRoutine, config.showCaller, config.showStack)
+		formatter = NewColorFormatter(true, config.showProcess, config.showRoutine, config.showCaller, config.showStack, config.showStackLevels...)
 	} else {
-		formatter = NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller, config.showStack)
+		formatter = NewPlainFormatter(config.showProcess, config.showRoutine, config.showCaller, config.showStack, config.showStackLevels...)
 	}
 
 	return &ConsoleWriter{

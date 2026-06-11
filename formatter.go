@@ -23,21 +23,23 @@ type Formatter interface {
 
 // ColorFormatter 彩色格式化器
 type ColorFormatter struct {
-	colorMap    map[int]string
-	resetColor  string
-	showColor   bool
-	showProcess bool
-	showRoutine bool
-	showCaller  bool
-	showStack   bool
+	colorMap        map[int]string
+	resetColor      string
+	showColor       bool
+	showProcess     bool
+	showRoutine     bool
+	showCaller      bool
+	showStack       bool
+	showStackLevels []int
 }
 
 // PlainFormatter 纯文本格式化器
 type PlainFormatter struct {
-	showProcess bool
-	showRoutine bool
-	showCaller  bool
-	showStack   bool
+	showProcess     bool
+	showRoutine     bool
+	showCaller      bool
+	showStack       bool
+	showStackLevels []int
 }
 
 // JSONFormatter JSON格式化器
@@ -60,7 +62,7 @@ const (
 )
 
 // NewColorFormatter 创建彩色格式化器
-func NewColorFormatter(showColor, showProcess, showRoutine, showCaller, showStack bool) *ColorFormatter {
+func NewColorFormatter(showColor, showProcess, showRoutine, showCaller, showStack bool, showStackLevels ...int) *ColorFormatter {
 	formatter := &ColorFormatter{
 		colorMap: map[int]string{
 			LevelTrace: ColorTrace,
@@ -71,12 +73,13 @@ func NewColorFormatter(showColor, showProcess, showRoutine, showCaller, showStac
 			LevelFatal: ColorFatal,
 			LevelPanic: ColorPanic,
 		},
-		resetColor:  ColorReset,
-		showColor:   showColor && isTerminalColorSupported(),
-		showProcess: showProcess,
-		showRoutine: showRoutine,
-		showCaller:  showCaller,
-		showStack:   showStack,
+		resetColor:      ColorReset,
+		showColor:       showColor && isTerminalColorSupported(),
+		showProcess:     showProcess,
+		showRoutine:     showRoutine,
+		showCaller:      showCaller,
+		showStack:       showStack,
+		showStackLevels: showStackLevels,
 	}
 	return formatter
 }
@@ -120,7 +123,7 @@ func (f *ColorFormatter) Format(level int, message string, metadata *LogMetadata
 	}
 
 	// 打印堆栈
-	if f.showStack {
+	if f.showStack && isInSilice(level, f.showStackLevels) {
 		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(6)))
 	}
 
@@ -139,12 +142,13 @@ func (f *ColorFormatter) getColorCode(level int) string {
 }
 
 // NewPlainFormatter 创建纯文本格式化器
-func NewPlainFormatter(showProcess, showRoutine, showCaller, showStack bool) *PlainFormatter {
+func NewPlainFormatter(showProcess, showRoutine, showCaller, showStack bool, showStackLevels ...int) *PlainFormatter {
 	return &PlainFormatter{
-		showProcess: showProcess,
-		showRoutine: showRoutine,
-		showCaller:  showCaller,
-		showStack:   showStack,
+		showProcess:     showProcess,
+		showRoutine:     showRoutine,
+		showCaller:      showCaller,
+		showStack:       showStack,
+		showStackLevels: showStackLevels,
 	}
 }
 
@@ -182,7 +186,7 @@ func (f *PlainFormatter) Format(level int, message string, metadata *LogMetadata
 	}
 
 	// 打印堆栈
-	if f.showStack {
+	if f.showStack && isInSilice(level, f.showStackLevels) {
 		parts = append(parts, fmt.Sprintf("#STACK# %s", getCallStack(6)))
 	}
 
@@ -227,7 +231,7 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 	if metadata.Message != "" {
 		entry["msg"] = metadata.Message
 	}
-	if metadata.ShowStack {
+	if metadata.ShowStack && isInSilice(level, metadata.ShowStackLevels) {
 		entry["stack"] = getCallStack(6)
 	}
 	for k, v := range metadata.Fields {

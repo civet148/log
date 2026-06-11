@@ -66,19 +66,20 @@ func getDefaultLogger() *LoggerImpl {
 func NewLogger(opts ...Option) (*LoggerImpl, error) {
 	// 复制全局配置
 	loggerOptions := &logOptions{
-		level:          options.level,
-		logFilePath:    options.logFilePath,
-		logFileSize:    options.logFileSize,
-		maxBackups:     options.maxBackups,
-		disableConsole: options.disableConsole,
-		showProcess:    options.showProcess,
-		showRoutine:    options.showRoutine,
-		showCaller:     options.showCaller,
-		showColor:      options.showColor,
-		showStack:      options.showStack,
-		skipCallerNum:  options.skipCallerNum,
-		jsonFormatter:  options.jsonFormatter,
-		fields:         options.fields,
+		level:           options.level,
+		logFilePath:     options.logFilePath,
+		logFileSize:     options.logFileSize,
+		maxBackups:      options.maxBackups,
+		disableConsole:  options.disableConsole,
+		showProcess:     options.showProcess,
+		showRoutine:     options.showRoutine,
+		showCaller:      options.showCaller,
+		showColor:       options.showColor,
+		showStack:       options.showStack,
+		skipCallerNum:   options.skipCallerNum,
+		jsonFormatter:   options.jsonFormatter,
+		fields:          options.fields,
+		showStackLevels: options.showStackLevels,
 	}
 
 	// 应用选项

@@ -24,19 +24,20 @@ const (
 )
 
 type logOptions struct {
-	level          int            //日志级别
-	logFilePath    string         //日志输出文件路径
-	logFileSize    SizeMB         //文件日志分割大小(MB)
-	maxBackups     int            //日志文件最大备份数
-	disableConsole bool           //是否禁止终端屏幕输出
-	showProcess    bool           //是否显示进程ID
-	showRoutine    bool           //是否显示协程ID
-	showCaller     bool           //是否显示调用者信息
-	showColor      bool           //是否显示颜色
-	jsonFormatter  bool           //是否JSON格式输出
-	skipCallerNum  int            //跳过调用者数
-	showStack      bool           //打印错误时输出调用栈
-	fields         map[string]any //日志字段
+	level           int            //日志级别
+	logFilePath     string         //日志输出文件路径
+	logFileSize     SizeMB         //文件日志分割大小(MB)
+	maxBackups      int            //日志文件最大备份数
+	disableConsole  bool           //是否禁止终端屏幕输出
+	showProcess     bool           //是否显示进程ID
+	showRoutine     bool           //是否显示协程ID
+	showCaller      bool           //是否显示调用者信息
+	showColor       bool           //是否显示颜色
+	jsonFormatter   bool           //是否JSON格式输出
+	skipCallerNum   int            //跳过调用者数
+	showStack       bool           //打印错误时输出调用栈
+	fields          map[string]any //日志字段
+	showStackLevels []int          //输出调用栈的日志级别
 }
 
 var options = &logOptions{
@@ -110,8 +111,8 @@ func DisableConsole() {
 	opf(options)
 }
 
-func EnableShowStack() {
-	opf := WithShowStack()
+func EnableShowStack(levels ...int) {
+	opf := WithShowStack(levels...)
 	opf(options)
 }
 
@@ -207,9 +208,10 @@ func WithLogFile(logFile string) Option {
 	}
 }
 
-func WithShowStack() Option {
+func WithShowStack(levels ...int) Option {
 	return func(o *logOptions) {
 		o.showStack = true
+		o.showStackLevels = levels
 	}
 }
 

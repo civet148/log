@@ -12,14 +12,15 @@ import (
 
 // LogMetadata 日志元数据结构
 type LogMetadata struct {
-	Timestamp time.Time              `json:"@timestamp"`
-	Level     string                 `json:"level"`
-	ProcessID int                    `json:"process_id,omitempty"`
-	RoutineID uint64                 `json:"routine_id,omitempty"`
-	Caller    string                 `json:"caller,omitempty"`
-	ShowStack bool                   `json:"show_stack,omitempty"`
-	Message   string                 `json:"msg"`
-	Fields    map[string]interface{} `json:"fields,omitempty"`
+	Timestamp       time.Time              `json:"@timestamp"`
+	Level           string                 `json:"level"`
+	ProcessID       int                    `json:"process_id,omitempty"`
+	RoutineID       uint64                 `json:"routine_id,omitempty"`
+	Caller          string                 `json:"caller,omitempty"`
+	ShowStack       bool                   `json:"show_stack,omitempty"`
+	Message         string                 `json:"msg"`
+	Fields          map[string]interface{} `json:"fields,omitempty"`
+	ShowStackLevels []int                  `json:"show_stack_levels,omitempty"`
 }
 
 // JSONLogEntry JSON专用日志条目
@@ -67,6 +68,7 @@ func newLogMetadata(level int, message string, opts *logOptions) *LogMetadata {
 	}
 	if opts.showStack {
 		metadata.ShowStack = true
+		metadata.ShowStackLevels = opts.showStackLevels
 	}
 	return metadata
 }
@@ -144,6 +146,18 @@ func getGoroutineID() uint64 {
 		}
 	}
 	return 0
+}
+
+func isInSilice(level int, levels []int) bool {
+	if len(levels) == 0 {
+		return true
+	}
+	for _, l := range levels {
+		if l == level {
+			return true
+		}
+	}
+	return false
 }
 
 // getCaller 获取调用者信息

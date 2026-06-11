@@ -12,7 +12,7 @@ func init() {
 	log.SetLevel(log.LevelDebug)
 	log.SetJsonFormatter()
 	log.SetFileName("output-json.log") //同时输出到文件
-	log.EnableShowStack()
+	log.EnableShowStack(log.LevelError, log.LevelFatal)
 }
 
 type Request struct {
