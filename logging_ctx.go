@@ -26,6 +26,7 @@ type LogContext struct {
 	caller       string
 	milliSeconds int64
 	hasError     bool
+	startTime    time.Time
 }
 
 func (lc *LogContext) GetLogger() Logger {
@@ -54,6 +55,7 @@ func (lc *LogContext) AppendMsg(msg string, args ...any) {
 
 func NewContext(ctx context.Context, opts ...CtxOption) context.Context {
 	lc := &LogContext{
+		startTime:    time.Now(),
 		milliSeconds: time.Now().UnixMilli(),
 	}
 	for _, opt := range opts {
@@ -127,7 +129,7 @@ func PrintContext(ctx context.Context) {
 	ms := time.Now().UnixMilli()
 	dur := convertMsToDurationStr(ms - lc.milliSeconds)
 	lc.AppendFields("duration", dur)
-
+	lc.AppendFields("@timestamp", lc.startTime.Format(DateTimeFormat))
 	logger := lc.logger
 	if logger == nil {
 		Warnf("PrintContext: logger is nil")
