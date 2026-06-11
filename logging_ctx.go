@@ -108,9 +108,11 @@ func WithError(ctx context.Context, err error) error {
 		Warnf("WithPrintf: log context not found")
 		return err
 	}
-	lc.hasError = true
-	lc.AppendFields("error", err.Error())
-	lc.AppendFields("stack", getCallStack(2))
+	if !lc.hasError {
+		lc.hasError = true
+		lc.AppendFields("error", err.Error())
+		lc.AppendFields("stack", getCallStack(2))
+	}
 	return err
 }
 
