@@ -161,6 +161,27 @@ func getCaller(skip int) string {
 	return fmt.Sprintf("%s:%d %s()", file, line, getFuncName(pc))
 }
 
+// getCallStack 获取调用栈信息(从当前堆栈上一层往上最多取n层函数，用分号分隔)
+func getCallStack(skip int) (stacks string) {
+
+	depth := 5
+	var stackList []string
+
+	for i := skip; i < skip+depth; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		// 只保留文件名，不包含完整路径
+		if idx := strings.LastIndex(file, "/"); idx >= 0 {
+			file = file[idx+1:]
+		}
+		stackList = append(stackList, fmt.Sprintf("%s:%d %s()", file, line, getFuncName(pc)))
+	}
+
+	return strings.Join(stackList, "; ")
+}
+
 // 截取函数名称
 func getFuncName(pc uintptr) (name string) {
 

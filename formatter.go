@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -355,31 +354,4 @@ func (fc *FormatterChain) Format(level int, message string, metadata *LogMetadat
 		result = formatter.Format(level, result, metadata)
 	}
 	return result
-}
-
-// getCallStack 获取调用栈信息(从当前堆栈上一层往上最多取n层函数，用分号分隔)
-func getCallStack(skip int) (stacks string) {
-
-	depth := 5
-	var stackList []string
-
-	for i := skip; i < skip+depth; i++ {
-		pc, _, _, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-
-		fn := runtime.FuncForPC(pc)
-		if fn == nil {
-			continue
-		}
-
-		name := fn.Name()
-		if strings.Contains(name, "/") {
-			name = name[strings.LastIndex(name, "/")+1:]
-		}
-		stackList = append(stackList, name)
-	}
-
-	return strings.Join(stackList, "; ")
 }

@@ -25,6 +25,7 @@ type LogContext struct {
 	msgs         []string
 	caller       string
 	milliSeconds int64
+	hasError     bool
 }
 
 func (lc *LogContext) GetLogger() Logger {
@@ -107,6 +108,7 @@ func WithError(ctx context.Context, err error) error {
 		Warnf("WithPrintf: log context not found")
 		return err
 	}
+	lc.hasError = true
 	lc.AppendFields("error", err.Error())
 	lc.AppendFields("stack", getCallStack(2))
 	return err
@@ -131,7 +133,11 @@ func PrintContext(ctx context.Context) {
 	}
 	var msg = strings.Join(lc.msgs, "; ")
 	logger.WithFields(lc.fields...)
-	logger.Infof(msg)
+	if lc.hasError {
+		_ = logger.Errorf(msg)
+	} else {
+		logger.Infof(msg)
+	}
 }
 
 // 总毫秒数转为 1d2h30m5s.321 格式
