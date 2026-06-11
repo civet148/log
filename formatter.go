@@ -386,5 +386,5 @@ func getCallStack(level int) (stacks string) {
 		stackList = append(stackList, name)
 	}
 
-	return strings.Join(stackList, ";")
+	return strings.Join(stackList, "; ")
 }
