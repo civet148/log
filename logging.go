@@ -330,7 +330,6 @@ func (l *LoggerImpl) Errorf(format string, args ...any) error {
 func (l *LoggerImpl) Fatalf(format string, args ...any) {
 	if l.isClosed == 0 && l.isLevelEnabled(LevelFatal) {
 		l.logWithLevel(LevelFatal, format, args...)
-		os.Exit(-99)
 	}
 }
 
