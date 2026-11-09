@@ -118,7 +118,7 @@ func WithError(ctx context.Context, err error) error {
 	return err
 }
 
-func PrintContext(ctx context.Context) {
+func PrintContext(ctx context.Context, levels ...LogLevel) {
 	var ok bool
 	var lc *LogContext
 	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
@@ -140,7 +140,26 @@ func PrintContext(ctx context.Context) {
 	if lc.hasError {
 		_ = logger.Errorf(msg)
 	} else {
-		logger.Infof(msg)
+		level := LevelInfo
+		if len(levels) > 0 {
+			level = levels[0]
+		}
+		switch level {
+		case LevelFatal:
+			logger.Fatalf(msg)
+		case LevelError:
+			_ = logger.Errorf(msg)
+		case LevelWarn:
+			logger.Warnf(msg)
+		case LevelInfo:
+			logger.Infof(msg)
+		case LevelDebug:
+			logger.Debugf(msg)
+		case LevelTrace:
+			logger.Tracef(msg)
+		default:
+			logger.Infof(msg)
+		}
 	}
 }
 

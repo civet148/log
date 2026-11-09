@@ -8,14 +8,16 @@ import (
 
 type SizeMB = int
 
+type LogLevel = int
+
 const (
-	LevelTrace = 0
-	LevelDebug = 1
-	LevelInfo  = 2
-	LevelWarn  = 3
-	LevelError = 4
-	LevelFatal = 5
-	LevelPanic = 6
+	LevelTrace LogLevel = 0
+	LevelDebug LogLevel = 1
+	LevelInfo  LogLevel = 2
+	LevelWarn  LogLevel = 3
+	LevelError LogLevel = 4
+	LevelFatal LogLevel = 5
+	LevelPanic LogLevel = 6
 )
 
 const (
