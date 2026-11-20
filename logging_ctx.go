@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	LOG_CTX_KEY = "LOG_CTX_KEY"
-	CALLER_KEY  = "@caller"
-	STACK_KEY   = "@stack"
+	LOG_CTX_KEY   = "LOG_CTX_KEY"
+	CALLER_KEY    = "@caller"
+	STACK_KEY     = "@stack"
+	DURATION_KEY  = "@duration"
+	TIMESTAMP_KEY = "@timestamp"
 )
 
 type CtxOption func(lc *LogContext)
@@ -130,8 +132,8 @@ func PrintContext(ctx context.Context, levels ...LogLevel) {
 
 	ms := time.Now().UnixMilli()
 	dur := convertMsToDurationStr(ms - lc.milliSeconds)
-	lc.AppendFields("@timestamp", lc.startTime.Format(DateTimeFormat))
-	lc.AppendFields("@duration", dur)
+	lc.AppendFields(TIMESTAMP_KEY, lc.startTime.Format(DateTimeFormat))
+	lc.AppendFields(DURATION_KEY, dur)
 	logger := lc.logger
 	if logger == nil {
 		Warnf("PrintContext: logger is nil")
