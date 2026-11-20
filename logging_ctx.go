@@ -139,7 +139,7 @@ func PrintContext(ctx context.Context, levels ...LogLevel) {
 		Warnf("PrintContext: logger is nil")
 		return
 	}
-	var msg = strings.Join(lc.msgs, " || ")
+	var msg = strings.Join(lc.msgs, " | ")
 	logger.WithFields(lc.fields...)
 	if lc.hasError {
 		_ = logger.Errorf(msg)
