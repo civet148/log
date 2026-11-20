@@ -128,8 +128,8 @@ func PrintContext(ctx context.Context, levels ...LogLevel) {
 
 	ms := time.Now().UnixMilli()
 	dur := convertMsToDurationStr(ms - lc.milliSeconds)
-	lc.AppendFields("duration", dur)
 	lc.AppendFields("@timestamp", lc.startTime.Format(DateTimeFormat))
+	lc.AppendFields("@duration", dur)
 	logger := lc.logger
 	if logger == nil {
 		Warnf("PrintContext: logger is nil")
