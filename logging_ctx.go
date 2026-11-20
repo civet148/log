@@ -9,6 +9,8 @@ import (
 
 const (
 	LOG_CTX_KEY = "LOG_CTX_KEY"
+	CALLER_KEY  = "@caller"
+	STACK_KEY   = "@stack"
 )
 
 type CtxOption func(lc *LogContext)
@@ -96,7 +98,7 @@ func WithPrintf(ctx context.Context, msg string, args ...any) {
 	//查询当前报错的方法名和文件名行号等信息
 	if lc.caller == "" {
 		lc.caller = getCaller(2)
-		lc.AppendFields("caller", lc.caller)
+		lc.AppendFields(CALLER_KEY, lc.caller)
 	}
 	if msg != "" {
 		lc.AppendMsg(msg, args...)
@@ -113,7 +115,7 @@ func WithError(ctx context.Context, err error) error {
 	if !lc.hasError {
 		lc.hasError = true
 		lc.AppendFields("error", err.Error())
-		lc.AppendFields("stack", getCallStack(2))
+		lc.AppendFields(STACK_KEY, getCallStack(2))
 	}
 	return err
 }

@@ -225,14 +225,14 @@ func (f *JSONFormatter) Format(level int, message string, metadata *LogMetadata)
 	}
 
 	if metadata.Caller != "" {
-		entry["caller"] = metadata.Caller
+		entry[CALLER_KEY] = metadata.Caller
 	}
 
 	if metadata.Message != "" {
 		entry["msg"] = metadata.Message
 	}
 	if metadata.ShowStack && isInSilice(level, metadata.ShowStackLevels) {
-		entry["stack"] = getCallStack(6)
+		entry[STACK_KEY] = getCallStack(6)
 	}
 	for k, v := range metadata.Fields {
 		entry[k] = v

@@ -226,7 +226,7 @@ func (entry *JSONLogEntry) MarshalJSON() ([]byte, error) {
 	}
 
 	if entry.Caller != "" {
-		temp["caller"] = entry.Caller
+		temp[CALLER_KEY] = entry.Caller
 	}
 
 	if len(entry.Fields) > 0 {
@@ -284,7 +284,7 @@ func (entry *JSONLogEntry) UnmarshalJSON(data []byte) error {
 		entry.RoutineID = uint64(v)
 	}
 
-	if v, ok := temp["caller"].(string); ok {
+	if v, ok := temp[CALLER_KEY].(string); ok {
 		entry.Caller = v
 	}
 
