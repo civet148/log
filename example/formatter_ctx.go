@@ -46,5 +46,6 @@ func grpcMethodCall(ctx context.Context, req interface{}) (res interface{}, err 
 }
 
 func occurError(ctx context.Context) (err error) {
+	log.WithPrintf(ctx, "ready to occur some error")
 	return fmt.Errorf("network connection failed")
 }
