@@ -38,9 +38,9 @@ func loggerJsonExample() {
 	// 这些日志都将采用JSON格式输出
 	logger.Tracef("这是一条TRACE级别的日志")
 	logger.Debugf("这是一条DEBUG级别的日志")
-	logger.Info("这是一条INFO级别的日志")
-	logger.Warn("这是一条WARN级别的日志")
-	logger.Error("这是一条ERROR级别的日志")
+	logger.Infof("这是一条INFO级别的日志")
+	logger.Warnf("这是一条WARN级别的日志")
+	logger.Errorf("这是一条ERROR级别的日志")
 
 	// Json方法也会将参数序列化为普通消息字符串后采用JSON格式输出
 	logger.Json(map[string]interface{}{
@@ -59,9 +59,9 @@ func defaultJsonExample() {
 	// 普通日志级别
 	log.Tracef("这是一条TRACE级别的日志")
 	log.Debugf("这是一条DEBUG级别的日志")
-	log.Info("这是一条INFO级别的日志")
-	log.Warn("这是一条WARN级别的日志")
-	log.Error("这是一条ERROR级别的日志")
+	log.Infof("这是一条INFO级别的日志")
+	log.Warnf("这是一条WARN级别的日志")
+	log.Errorf("这是一条ERROR级别的日志")
 
 	// Json方法将参数序列化为JSON并使用专用的JSON输出器
 	log.Json(map[string]interface{}{

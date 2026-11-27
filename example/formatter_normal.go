@@ -18,12 +18,12 @@ func main() {
 	var err error
 	// 1. 基本日志输出
 	fmt.Println("1. 基本日志输出:")
-	log.Trace("这是TRACE级别日志", "1")
-	log.Debug("这是DEBUG级别日志", "2")
-	log.Info("这是INFO级别日志", 3)
-	log.Warn("这是WARN级别日志", 4)
-	log.Error("这是ERROR级别日志", 5)
-	err = log.Error(fmt.Errorf("打印一个error对象"))
+	log.Tracef("这是TRACE级别日志", "1")
+	log.Debugf("这是DEBUG级别日志", "2")
+	log.Infof("这是INFO级别日志", 3)
+	log.Warnf("这是WARN级别日志", 4)
+	log.Errorf("这是ERROR级别日志", 5)
+	err = log.Errorf("打印一个error对象%d", 100)
 	fmt.Printf("err: %s\n", err)
 	err = log.Errorf("返回一个error对象")
 	fmt.Printf("err: %s\n", err)
@@ -94,7 +94,7 @@ func main() {
 	}
 	defer customLogger.Close()
 
-	customLogger.Info("这是来自自定义logger的消息")
+	customLogger.Infof("这是来自自定义logger的消息")
 	customLogger.Json(map[string]interface{}{
 		"logger":    "fields",
 		"msg":       "自定义logger的JSON输出",
@@ -105,7 +105,7 @@ func main() {
 	// 5. 错误处理示例
 	fmt.Println("5. 错误处理:")
 
-	err = log.Error("这是一个错误示例")
+	err = log.Errorf("这是一个错误示例")
 	if err != nil {
 		fmt.Printf("捕获到错误: %v\n", err)
 	}
@@ -126,7 +126,7 @@ func main() {
 		log.WithDisableConsole(),
 	)
 	if err == nil {
-		fileLogger.Info("这条消息只会写入文件")
+		fileLogger.Infof("这条消息只会写入文件")
 		fileLogger.Close()
 		fmt.Println("已写入仅文件日志 (file_only.log)")
 	}
@@ -136,7 +136,7 @@ func main() {
 		log.WithLevel(log.LevelInfo),
 	)
 	if err == nil {
-		noColorLogger.Info("这是无颜色的日志输出")
+		noColorLogger.Infof("这是无颜色的日志输出")
 		noColorLogger.Close()
 	}
 	fmt.Println()
@@ -150,10 +150,10 @@ func main() {
 	)
 	if err == nil {
 		fmt.Println("设置为WARN级别，以下只会显示WARN和ERROR:")
-		warnLogger.Debug("这条DEBUG不会显示")
-		warnLogger.Info("这条INFO不会显示")
-		warnLogger.Warn("这条WARN会显示")
-		warnLogger.Error("这条ERROR会显示")
+		warnLogger.Debugf("这条DEBUG不会显示")
+		warnLogger.Infof("这条INFO不会显示")
+		warnLogger.Warnf("这条WARN会显示")
+		warnLogger.Errorf("这条ERROR会显示")
 		warnLogger.Close()
 	}
 	fmt.Println()
@@ -192,8 +192,8 @@ func main() {
 		log.WithJsonFormatter(),
 	)
 	if err == nil {
-		jsonFormatterLogger.Info("这条INFO消息将以JSON格式输出")
-		jsonFormatterLogger.Warn("这条WARN消息也将以JSON格式输出")
+		jsonFormatterLogger.Debugf("这条DEBUG消息将以JSON格式输出")
+		jsonFormatterLogger.Warnf("这条WARN消息也将以JSON格式输出")
 
 		// Json方法将参数序列化为普通消息字符串后也采用JSON格式输出
 		jsonFormatterLogger.Json(map[string]interface{}{
