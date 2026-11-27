@@ -36,7 +36,7 @@ func main() {
 }
 
 func grpcMethodCall(ctx context.Context, req interface{}) (res interface{}, err error) {
-	log.WithPrintf(ctx, "gprc request: %+v", req)
+	log.Infoc(ctx, "gprc request: %+v", req)
 	time.Sleep(1 * time.Second)
 	log.WithFields(ctx, "trace_id", 100000000000086, "key2", 2, "key3", "3")
 	if err = occurError(ctx); err != nil {
@@ -46,6 +46,6 @@ func grpcMethodCall(ctx context.Context, req interface{}) (res interface{}, err 
 }
 
 func occurError(ctx context.Context) (err error) {
-	log.WithPrintf(ctx, "ready to occur some error")
+	log.Errorc(ctx, "ready to occur some error")
 	return fmt.Errorf("network connection failed")
 }

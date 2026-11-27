@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,17 +11,18 @@ import (
 )
 
 var LevelNames = []string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "PANIC", "JSON"}
+var LevelShortNames = []string{"T", "D", "I", "W", "E", "F", "P", "J"}
 
 // Logger 日志接口
 type Logger interface {
 	Json(args ...any)
-	Trace(args ...any)
-	Debug(args ...any)
-	Info(args ...any)
-	Warn(args ...any)
-	Error(args ...any) error
-	Fatal(args ...any)
 	Panic(args ...any)
+	Tracec(ctx context.Context, format string, args ...any)
+	Debugc(ctx context.Context, format string, args ...any)
+	Infoc(ctx context.Context, format string, args ...any)
+	Warnc(ctx context.Context, format string, args ...any)
+	Errorc(ctx context.Context, format string, args ...any) error
+	Fatalc(ctx context.Context, format string, args ...any)
 	Tracef(format string, args ...any)
 	Debugf(format string, args ...any)
 	Infof(format string, args ...any)
@@ -106,39 +108,39 @@ func Json(args ...any) {
 	getDefaultLogger().Json(args...)
 }
 
-// Trace 输出TRACE级别日志
-func Trace(args ...any) {
-	getDefaultLogger().Trace(args...)
-}
-
-// Debug 输出DEBUG级别日志
-func Debug(args ...any) {
-	getDefaultLogger().Debug(args...)
-}
-
-// Info 输出INFO级别日志
-func Info(args ...any) {
-	getDefaultLogger().Info(args...)
-}
-
-// Warn 输出WARN级别日志
-func Warn(args ...any) {
-	getDefaultLogger().Warn(args...)
-}
-
-// Error 输出ERROR级别日志
-func Error(args ...any) error {
-	return getDefaultLogger().Error(args...)
-}
-
-// Fatal 输出FATAL级别日志
-func Fatal(args ...any) {
-	getDefaultLogger().Fatal(args...)
-}
-
 // Panic 输出PANIC级别日志
 func Panic(args ...any) {
 	getDefaultLogger().Panic(args...)
+}
+
+// Tracec 输出TRACE级别日志
+func Tracec(ctx context.Context, format string, args ...any) {
+	getDefaultLogger().Tracec(ctx, format, args...)
+}
+
+// Debugc 输出DEBUG级别日志
+func Debugc(ctx context.Context, format string, args ...any) {
+	getDefaultLogger().Debugc(ctx, format, args...)
+}
+
+// Infoc 输出INFO级别日志
+func Infoc(ctx context.Context, format string, args ...any) {
+	getDefaultLogger().Infoc(ctx, format, args...)
+}
+
+// Warnc 输出WARN级别日志
+func Warnc(ctx context.Context, format string, args ...any) {
+	getDefaultLogger().Warnc(ctx, format, args...)
+}
+
+// Errorc 输出ERROR级别日志
+func Errorc(ctx context.Context, format string, args ...any) error {
+	return getDefaultLogger().Errorc(ctx, format, args...)
+}
+
+// Fatal 输出FATAL级别日志
+func Fatalc(ctx context.Context, format string, args ...any) {
+	getDefaultLogger().Fatalc(ctx, format, args...)
 }
 
 // Tracef 输出格式化TRACE级别日志
@@ -216,61 +218,95 @@ func (l *LoggerImpl) marshalJson(args ...any) (message string) {
 	return message
 }
 
-// Trace 输出TRACE级别日志
-func (l *LoggerImpl) Trace(args ...any) {
+// Tracec 输出TRACE级别日志
+func (l *LoggerImpl) Tracec(ctx context.Context, format string, args ...any) {
 	if l.isClosed != 0 || !l.isLevelEnabled(LevelTrace) {
 		return
 	}
-
-	message := fmt.Sprint(args...)
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelTrace, message)
+		return
+	}
 	l.logWithLevel(LevelTrace, message)
 }
 
-// Debug 输出DEBUG级别日志
-func (l *LoggerImpl) Debug(args ...any) {
+// Debugc 输出DEBUG级别日志
+func (l *LoggerImpl) Debugc(ctx context.Context, format string, args ...any) {
 	if l.isClosed != 0 || !l.isLevelEnabled(LevelDebug) {
 		return
 	}
-
-	message := fmt.Sprint(args...)
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelDebug, message)
+		return
+	}
 	l.logWithLevel(LevelDebug, message)
 }
 
-// Info 输出INFO级别日志
-func (l *LoggerImpl) Info(args ...any) {
+// Infoc 输出INFO级别日志
+func (l *LoggerImpl) Infoc(ctx context.Context, format string, args ...any) {
 	if l.isClosed != 0 || !l.isLevelEnabled(LevelInfo) {
 		return
 	}
-
-	message := fmt.Sprint(args...)
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelInfo, message)
+		return
+	}
 	l.logWithLevel(LevelInfo, message)
 }
 
-// Warn 输出WARN级别日志
-func (l *LoggerImpl) Warn(args ...any) {
+// Warnc 输出WARN级别日志
+func (l *LoggerImpl) Warnc(ctx context.Context, format string, args ...any) {
 	if l.isClosed != 0 || !l.isLevelEnabled(LevelWarn) {
 		return
 	}
-
-	message := fmt.Sprint(args...)
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelWarn, message)
+		return
+	}
 	l.logWithLevel(LevelWarn, message)
 }
 
-// Error 输出ERROR级别日志并返回错误
-func (l *LoggerImpl) Error(args ...any) error {
-	var message string
-	if l.isClosed == 0 && l.isLevelEnabled(LevelError) {
-		message = l.logWithLevel(LevelError, "", args...)
+// Errorc 输出ERROR级别日志并返回错误
+func (l *LoggerImpl) Errorc(ctx context.Context, format string, args ...any) error {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelError) {
+		return nil
 	}
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelError, message)
+		return nil
+	}
+	_ = l.logWithLevel(LevelError, message)
 	return fmt.Errorf(message)
 }
 
-// Fatal 输出FATAL级别日志并返回错误
-func (l *LoggerImpl) Fatal(args ...any) {
-	message := fmt.Sprint(args...)
-	if l.isClosed == 0 && l.isLevelEnabled(LevelFatal) {
-		l.logWithLevel(LevelFatal, message)
+// Fatalc 输出FATAL级别日志并返回错误
+func (l *LoggerImpl) Fatalc(ctx context.Context, format string, args ...any) {
+	if l.isClosed != 0 || !l.isLevelEnabled(LevelFatal) {
+		return
 	}
+	var ok bool
+	var lc *LogContext
+	message := fmt.Sprintf(format, args...)
+	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); ok {
+		lc.withCtxPrintf(LevelFatal, message)
+		return
+	}
+	_ = l.logWithLevel(LevelFatal, message)
 }
 
 // Panic 输出PANIC级别日志并触发panic

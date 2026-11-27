@@ -23,14 +23,19 @@ func WithLogger(logger Logger) CtxOption {
 	}
 }
 
+type logCtxMsg struct {
+	level LogLevel
+	msg   string
+}
 type LogContext struct {
 	logger       Logger
 	fields       []any
-	msgs         []string
+	msgs         []logCtxMsg
 	caller       string
 	milliSeconds int64
 	hasError     bool
 	startTime    time.Time
+	level        LogLevel
 }
 
 func (lc *LogContext) GetLogger() Logger {
@@ -53,14 +58,34 @@ func (lc *LogContext) AppendFields(kvs ...any) {
 	lc.fields = append(lc.fields, kvs...)
 }
 
-func (lc *LogContext) AppendMsg(msg string, args ...any) {
-	lc.msgs = append(lc.msgs, fmt.Sprintf(msg, args...))
+func (lc *LogContext) AppendLevelMsg(level LogLevel, msg string, args ...any) {
+	lc.msgs = append(lc.msgs, lc.makeLogCtxMsg(level, msg, args...))
+}
+
+func (lc *LogContext) makeLogCtxMsg(level LogLevel, msg string, args ...any) logCtxMsg {
+	return logCtxMsg{
+		level: level,
+		msg:   fmt.Sprintf(msg, args...),
+	}
+}
+
+func (lc *LogContext) withCtxPrintf(level LogLevel, msg string, args ...any) {
+	//查询当前报错的方法名和文件名行号等信息
+	lc.caller = getCaller(4)
+	lc.AppendFields(CALLER_KEY, lc.caller)
+	if level > lc.level {
+		lc.level = level
+	}
+	if msg != "" {
+		lc.AppendLevelMsg(level, msg, args...)
+	}
 }
 
 func NewContext(ctx context.Context, opts ...CtxOption) context.Context {
 	lc := &LogContext{
 		startTime:    time.Now(),
 		milliSeconds: time.Now().UnixMilli(),
+		level:        -1,
 	}
 	for _, opt := range opts {
 		opt(lc)
@@ -90,23 +115,6 @@ func WithFields(ctx context.Context, kvs ...any) {
 	lc.AppendFields(kvs...)
 }
 
-func WithPrintf(ctx context.Context, msg string, args ...any) {
-	var ok bool
-	var lc *LogContext
-	if lc, ok = ctx.Value(LOG_CTX_KEY).(*LogContext); !ok {
-		Warnf("WithPrintf: log context not found")
-		return
-	}
-	//查询当前报错的方法名和文件名行号等信息
-	if lc.caller == "" {
-		lc.caller = getCaller(2)
-		lc.AppendFields(CALLER_KEY, lc.caller)
-	}
-	if msg != "" {
-		lc.AppendMsg(msg, args...)
-	}
-}
-
 func WithError(ctx context.Context, err error) error {
 	var ok bool
 	var lc *LogContext
@@ -120,6 +128,14 @@ func WithError(ctx context.Context, err error) error {
 		lc.AppendFields(STACK_KEY, getCallStack(2))
 	}
 	return err
+}
+
+func (lc *LogContext) getLogLevelMsg() string {
+	var levelMsgs []string
+	for _, m := range lc.msgs {
+		levelMsgs = append(levelMsgs, fmt.Sprintf("[%v] %s", LevelShortNames[m.level], m.msg))
+	}
+	return strings.Join(levelMsgs, " | ")
 }
 
 func PrintContext(ctx context.Context, levels ...LogLevel) {
@@ -139,7 +155,7 @@ func PrintContext(ctx context.Context, levels ...LogLevel) {
 		Warnf("PrintContext: logger is nil")
 		return
 	}
-	var msg = strings.Join(lc.msgs, " | ")
+	var msg = lc.getLogLevelMsg()
 	logger.WithFields(lc.fields...)
 	if lc.hasError {
 		_ = logger.Errorf(msg)
@@ -147,6 +163,8 @@ func PrintContext(ctx context.Context, levels ...LogLevel) {
 		level := LevelInfo
 		if len(levels) > 0 {
 			level = levels[0]
+		} else if lc.level != -1 {
+			level = lc.level
 		}
 		switch level {
 		case LevelFatal:
